@@ -51,7 +51,6 @@ def resample(arr, new_len=13856):
     """
     Compresses the singal to the parameter "new_len" which is mandatory for 
     the X input to the CNN.
-
     """
     old_len = len(arr)
     diff = old_len-new_len
@@ -148,11 +147,28 @@ def framing(sample_rate, emphasized_signal):
     frames *= np.hamming(frame_length)  # Hamming Window
     return frames
 
-def build_X():
+def check_data():
+    """
+    Checks in the pickles folder for existing model. 
+    If their is an existing file it returns X, y from the pickle folder
+    """
+    if os.path.isfile(config.p_path):
+        print('Loading existing data for {} model'.format(config.mode))
+        with open(config.p_path, 'rb') as handle:
+            tmp = pickle.load(handle)
+            return tmp
+    else: 
+        return None
+
+def build_X_y():
     """
     Building X and y for the input and output of the CNN
 
     """
+    
+    tmp = check_data()
+    if tmp:
+        return tmp.data[0], tmp.data[1]  # return X, y from the pickle folder
     X = []
     _min, _max = float('inf'), -float('inf')
     for index, file in tqdm(enumerate(df['fname'])):
@@ -177,10 +193,20 @@ def build_X():
     X = np.array(X)
     X = (X - _min) / (_max - _min)
     X = X.reshape(X.shape[0], X.shape[1], X.shape[2], 1)
-    config.data = (X)
-    return X
+
+    y = np.array([])
+    y = to_categorical(df.label, num_classes=3)
+    
+    config.data = (X, y)
+    with open(config.p_path, 'wb') as handle:
+        pickle.dump(config, handle, protocol=2)
+    
+    return X, y
 
 def get_conv_model():
+    """
+    Convolutional Neural Network
+    """
     model = Sequential()
     model.add(Conv2D(16, (3,3), activation='relu', strides=(1, 1),
                       padding='same',input_shape=input_shape))
@@ -198,9 +224,73 @@ def get_conv_model():
     model.add(Dense(32, activation='relu'))
     model.add(Dense(3, activation='softmax'))
     model.summary()
-    model.compile(loss='categorical_crossentropy',
-                  optimizer='adam',
-                  metrics=['acc'])
+    model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['acc'])
+    return model
+
+def get_conv_model_2():
+    """
+    Convolutional Neural Network
+    https://www.datacamp.com/community/tutorials/convolutional-neural-networks-python
+    """
+    model = Sequential()
+    model.add(Conv2D(32, kernel_size=(3, 3),activation='linear',padding='same',input_shape=input_shape))
+    model.add(LeakyReLU(alpha=0.1))
+    model.add(MaxPooling2D((2, 2),padding='same'))
+    model.add(Dropout(0.25))
+    model.add(Conv2D(64, (3, 3), activation='linear',padding='same'))
+    model.add(LeakyReLU(alpha=0.1))
+    model.add(MaxPooling2D(pool_size=(2, 2),padding='same'))
+    model.add(Dropout(0.25))
+    model.add(Conv2D(128, (3, 3), activation='linear',padding='same'))
+    model.add(LeakyReLU(alpha=0.1))                  
+    model.add(MaxPooling2D(pool_size=(2, 2),padding='same'))
+    model.add(Dropout(0.4))
+    model.add(Flatten())
+    model.add(Dense(128, activation='linear'))
+    model.add(LeakyReLU(alpha=0.1))           
+    model.add(Dropout(0.3))
+    model.add(Dense(3, activation='softmax'))
+    model.summary()
+    model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['acc'])
+    return model
+
+def get_conv_model_3():
+    """
+    Acoustic event recognition using cochleagram image and convolutional neural networks (Sharan und Moir 2019) 
+
+    """
+    model = Sequential()
+    model.add(Conv2D(32, kernel_size=(3, 3),activation='linear',padding='same',input_shape=input_shape))
+    model.add(LeakyReLU(alpha=0.1))
+    model.add(MaxPooling2D((2, 2),padding='same'))
+    model.add(Dropout(0.25))
+    model.add(Conv2D(64, (3, 3), activation='linear',padding='same'))
+    model.add(LeakyReLU(alpha=0.1))
+    model.add(MaxPooling2D(pool_size=(2, 2),padding='same'))
+    model.add(Dropout(0.25))
+    
+    model.add(Conv2D(128, (3, 3), activation='linear',padding='same'))
+    model.add(LeakyReLU(alpha=0.1))                  
+    model.add(MaxPooling2D(pool_size=(2, 2),padding='same'))
+    model.add(Dropout(0.4))
+    
+    model.add(Flatten())
+    
+    model.add(Dense(128, activation='linear'))
+    model.add(LeakyReLU(alpha=0.1))           
+    model.add(Dropout(0.4))
+    
+    model.add(Dense(64, activation='linear'))
+    model.add(LeakyReLU(alpha=0.1))           
+    model.add(Dropout(0.4))
+    
+    model.add(Dense(32, activation='linear'))
+    model.add(LeakyReLU(alpha=0.1))           
+    model.add(Dropout(0.4))
+    
+    model.add(Dense(3, activation='softmax'))
+    model.summary()
+    model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['acc'])
     return model
 
 #  Program
@@ -221,21 +311,21 @@ config = Config()
 file = df['fname']
 
 #  Model
-X = build_X()
-y = []
-y = to_categorical(df.label, num_classes=3)
+X, y = build_X_y()
+
 y_flat = np.argmax(y, axis=1)
 input_shape = (X.shape[1], X.shape[2], 1)
 
-
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
 
-model = get_conv_model()
+model = get_conv_model_2()
+
+# class_weight = compute_class_weight('balanced', np.unique(y_flat), y_flat)
 
 early_stopping_monitor = EarlyStopping(patience=2)
 history = History()
-model.fit(X_train, y_train, epochs=10, batch_size=64, verbose=1,
-          callbacks=[history])#, shuffle=True, validation_split=0.1,
+model.fit(X_train, y_train, epochs=20, batch_size=32, verbose=1,
+          callbacks=[history])#,class_weight=class_weight)#, shuffle=True, validation_split=0.1,
           #callbacks=[early_stopping_monitor])
           #class_weight=class_weight)
 model.save(config.model_path)          
