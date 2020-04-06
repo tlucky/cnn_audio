@@ -3,6 +3,8 @@ import pandas as pd
 import os
 from tqdm import tqdm
 
+import pickle
+
 from keras.utils import to_categorical
 from scipy.io import wavfile
 #import scipy.io.wavfile
@@ -12,8 +14,9 @@ from keras.layers import Conv2D, MaxPool2D, Flatten
 from keras.layers import LeakyReLU, MaxPooling2D
 from keras.layers import Dropout, Dense, TimeDistributed
 from keras.models import Sequential
-
+from sklearn.utils.class_weight import compute_class_weight
 import matplotlib.pyplot as plt
+from keras.callbacks import ModelCheckpoint
 
 class Config:
     # nfft=500
@@ -147,9 +150,9 @@ def build_X_y ():
     config.max = _max
     X, y = np.array(X), np.array(y)
     X = (X - _min) / (_max - _min)
-    #X = X.reshape(X.shape[0], X.shape[1], X.shape[2], 1)
-    #y = to_categorical(y, num_classes=3)  # number of Classes:3
-    # config.data = (X, y)
+    X = X.reshape(X.shape[0], X.shape[1], X.shape[2], 1)
+    y = to_categorical(y, num_classes=3)  # number of Classes:3
+    config.data = (X, y)
     return X, y
 
 def get_conv_model():
@@ -233,9 +236,24 @@ X = X.reshape(X.shape[0], X.shape[1], X.shape[2], 1)
 y = to_categorical(df.label, num_classes=3)
 
 y_flat = np.argmax(y, axis=1)
-input_shape = (X.shape[0], 1)
+input_shape = (X.shape[1], X.shape[2], 1)
 
 model = get_conv_model()
+
+class_weight = compute_class_weight('balanced', np.unique(y_flat), y_flat)
+
+#  Only saves a new model when the predicition increases
+checkpoint = ModelCheckpoint(config.model_path, monitor='val_acc', verbose=1, 
+                              mode='max', save_best_only=True, 
+                              save_weights_only=False, period=1)
+
+model.fit(X, y, epochs=10, batch_size=32, shuffle=True, validation_split=0.1,
+          callbacks=[checkpoint])
+          #class_weight=class_weight)
+
+model.save(config.model_path)
+
+#model.save(config.model_path)
 
 # # Prints
 # plt.plot(emphasized_signal)
