@@ -19,6 +19,7 @@ from keras.callbacks import ModelCheckpoint
 from keras.callbacks import EarlyStopping
 from keras.callbacks import History
 from sklearn.model_selection import train_test_split
+from sklearn.model_selection import KFold
 
 class Config:
     # nfft=500
@@ -231,6 +232,8 @@ def get_conv_model_2():
     """
     Convolutional Neural Network
     https://www.datacamp.com/community/tutorials/convolutional-neural-networks-python
+    t = 883us/step
+    test loss, test acc: [0.10061795813168666, 0.961240291595459]
     """
     model = Sequential()
     model.add(Conv2D(32, kernel_size=(3, 3),activation='linear',padding='same',input_shape=input_shape))
@@ -257,7 +260,9 @@ def get_conv_model_2():
 def get_conv_model_3():
     """
     Acoustic event recognition using cochleagram image and convolutional neural networks (Sharan und Moir 2019) 
-
+    
+    t~869us/step
+    acc ~0.95
     """
     model = Sequential()
     model.add(Conv2D(32, kernel_size=(3, 3),activation='linear',padding='same',input_shape=input_shape))
@@ -278,15 +283,47 @@ def get_conv_model_3():
     
     model.add(Dense(128, activation='linear'))
     model.add(LeakyReLU(alpha=0.1))           
-    model.add(Dropout(0.4))
     
     model.add(Dense(64, activation='linear'))
     model.add(LeakyReLU(alpha=0.1))           
-    model.add(Dropout(0.4))
     
-    model.add(Dense(32, activation='linear'))
-    model.add(LeakyReLU(alpha=0.1))           
-    model.add(Dropout(0.4))
+    model.add(Dense(3, activation='softmax'))
+    model.summary()
+    model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['acc'])
+    return model
+
+def get_conv_model_4():
+    """
+    Deep Convolutional Neural Networks and Data Augmentation for 
+    Acoustic Event Detection (Takahashi et al. 2016)
+    
+    nicht ganz Nachbau möglich, wenig Infos
+    t = 6-7ms/step
+    acc ~0.95-0.96
+    """
+    model = Sequential()
+    model.add(Conv2D(64, kernel_size=(3, 3),activation='relu',padding='same',input_shape=input_shape))
+   
+    model.add(Dropout(0.25))
+    model.add(Conv2D(64, (3, 3), activation='relu',padding='same'))
+
+    model.add(MaxPooling2D(pool_size=(1, 2),padding='same'))
+   
+    model.add(Conv2D(128, (3, 3), activation='relu',padding='same'))              
+    model.add(MaxPooling2D(pool_size=(2, 2),padding='same'))
+    
+    model.add(Conv2D(128, (3, 3), activation='relu',padding='same'))              
+    model.add(MaxPooling2D(pool_size=(2, 2),padding='same'))
+  
+    model.add(Flatten())
+    
+    model.add(Dense(1024, activation='relu'))
+    model.add(Dropout(0.5))      
+    
+    model.add(Dense(1024, activation='relu'))
+    model.add(Dropout(0.5)) 
+    model.add(Dense(28, activation='relu'))      
+    model.add(Dropout(0.5))  
     
     model.add(Dense(3, activation='softmax'))
     model.summary()
@@ -316,32 +353,51 @@ X, y = build_X_y()
 y_flat = np.argmax(y, axis=1)
 input_shape = (X.shape[1], X.shape[2], 1)
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+# Split into training and test data
+#X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
 
-model = get_conv_model_2()
+#model = get_conv_model_2()
 
 # class_weight = compute_class_weight('balanced', np.unique(y_flat), y_flat)
 
 early_stopping_monitor = EarlyStopping(patience=2)
 history = History()
-model.fit(X_train, y_train, epochs=20, batch_size=32, verbose=1,
-          callbacks=[history])#,class_weight=class_weight)#, shuffle=True, validation_split=0.1,
+
+
+accuracy=[]
+loss=[]
+
+# Cross validation https://androidkt.com/k-fold-cross-validation-with-tensorflow-keras/
+n_split=3
+for train_index, test_index in KFold(n_split).split(X):
+    X_train,X_test=X[train_index],X[test_index]
+    y_train,y_test=y[train_index],y[test_index]
+  
+    model=get_conv_model()
+  
+  
+    model.fit(X_train, y_train, epochs=20, batch_size=32, verbose=1,
+              callbacks=[history])
+  
+          #,class_weight=class_weight)
           #callbacks=[early_stopping_monitor])
           #class_weight=class_weight)
-model.save(config.model_path)          
+
+    print('Model evaluation ',model.evaluate(X_test,y_test))
+# model.save(config.model_path)          
 
 #  Results and grafic
-results = model.evaluate(X_test, y_test, verbose=0)
-print('test loss, test acc:', results)
+    results = model.evaluate(X_test, y_test, verbose=0)
+    print('test loss, test acc:', results)
 
-accuracy = history.history['acc']
-loss = history.history['loss']
-epochs = range(len(accuracy))
-plt.plot(epochs, accuracy, 'g', label='Training accuracy')
-plt.plot(epochs, loss, 'r', label='Training loss')
-plt.title('Training accuracy and Training loss')
-plt.legend()
-plt.show()
+    accuracy.append(history.history['acc'])
+    loss.append(history.history['loss'])
+# epochs = range(len(accuracy))
+# plt.plot(epochs, accuracy, 'g', label='Training accuracy')
+# plt.plot(epochs, loss, 'r', label='Training loss')
+# plt.title('Training accuracy and Training loss')
+# plt.legend()
+# plt.show()
 
 #########
 # # Prints
