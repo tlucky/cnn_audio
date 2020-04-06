@@ -16,6 +16,9 @@ from keras.models import Sequential
 from sklearn.utils.class_weight import compute_class_weight
 import matplotlib.pyplot as plt
 from keras.callbacks import ModelCheckpoint
+from keras.callbacks import EarlyStopping
+from keras.callbacks import History
+from sklearn.model_selection import train_test_split
 
 class Config:
     # nfft=500
@@ -201,6 +204,7 @@ def get_conv_model():
     return model
 
 #  Program
+#  Importing data
 df = pd.DataFrame(columns=['fname', 'label', 'length'],)  
 df['fname'] = os.listdir('./clean/')
 for index, row in df.iterrows():
@@ -216,29 +220,40 @@ prob_dist = class_dist / class_dist.sum()
 config = Config()
 file = df['fname']
 
+#  Model
 X = build_X()
 y = []
 y = to_categorical(df.label, num_classes=3)
 y_flat = np.argmax(y, axis=1)
 input_shape = (X.shape[1], X.shape[2], 1)
 
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+
 model = get_conv_model()
 
-class_weight = compute_class_weight('balanced', np.unique(y_flat), y_flat)
-
-#  Only saves a new model when the predicition increases
-checkpoint = ModelCheckpoint(config.model_path, monitor='val_acc', verbose=1, 
-                              mode='max', save_best_only=True, 
-                              save_weights_only=False, period=1)
-
-model.fit(X, y, epochs=10, batch_size=32, shuffle=True, validation_split=0.1,
-          callbacks=[checkpoint])
+early_stopping_monitor = EarlyStopping(patience=2)
+history = History()
+model.fit(X_train, y_train, epochs=10, batch_size=64, verbose=1,
+          callbacks=[history])#, shuffle=True, validation_split=0.1,
+          #callbacks=[early_stopping_monitor])
           #class_weight=class_weight)
+model.save(config.model_path)          
 
-model.save(config.model_path)
+#  Results and grafic
+results = model.evaluate(X_test, y_test, verbose=0)
+print('test loss, test acc:', results)
 
-#model.save(config.model_path)
+accuracy = history.history['acc']
+loss = history.history['loss']
+epochs = range(len(accuracy))
+plt.plot(epochs, accuracy, 'g', label='Training accuracy')
+plt.plot(epochs, loss, 'r', label='Training loss')
+plt.title('Training accuracy and Training loss')
+plt.legend()
+plt.show()
 
+#########
 # # Prints
 # plt.plot(emphasized_signal)
 # plt.title('emphasized_signal 2')
