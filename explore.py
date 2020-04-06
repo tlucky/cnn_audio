@@ -207,6 +207,8 @@ def build_X_y():
 def get_conv_model():
     """
     Convolutional Neural Network
+    t = 6ms/step
+    Accuracy: 0.9883833  Loss: 0.02879412667852015
     """
     model = Sequential()
     model.add(Conv2D(16, (3,3), activation='relu', strides=(1, 1),
@@ -233,7 +235,7 @@ def get_conv_model_2():
     Convolutional Neural Network
     https://www.datacamp.com/community/tutorials/convolutional-neural-networks-python
     t = 883us/step
-    test loss, test acc: [0.10061795813168666, 0.961240291595459]
+    Accuracy: 0.9542019  Loss: 0.11913820796104951
     """
     model = Sequential()
     model.add(Conv2D(32, kernel_size=(3, 3),activation='linear',padding='same',input_shape=input_shape))
@@ -262,7 +264,7 @@ def get_conv_model_3():
     Acoustic event recognition using cochleagram image and convolutional neural networks (Sharan und Moir 2019) 
     
     t~869us/step
-    acc ~0.95
+    Accuracy: 0.95289737  Loss: 0.11410356166798624
     """
     model = Sequential()
     model.add(Conv2D(32, kernel_size=(3, 3),activation='linear',padding='same',input_shape=input_shape))
@@ -299,7 +301,7 @@ def get_conv_model_4():
     
     nicht ganz Nachbau möglich, wenig Infos
     t = 6-7ms/step
-    acc ~0.95-0.96
+    Accuracy: 0.9509731  Loss: 0.1374367955702112
     """
     model = Sequential()
     model.add(Conv2D(64, kernel_size=(3, 3),activation='relu',padding='same',input_shape=input_shape))
@@ -384,14 +386,13 @@ for train_index, test_index in KFold(n_split).split(X):
           #class_weight=class_weight)
 
     print('Model evaluation ',model.evaluate(X_test,y_test))
-# model.save(config.model_path)          
-
-#  Results and grafic
-    results = model.evaluate(X_test, y_test, verbose=0)
-    print('test loss, test acc:', results)
-
     accuracy.append(history.history['acc'])
     loss.append(history.history['loss'])
+
+#  Results and grafic   
+avg_accuracy = np.mean([accuracy[i][-1] for i in range(len(accuracy))])
+avg_loss = np.mean([loss[i][-1] for i in range(len(loss))])
+print('Accuracy: ' + str(avg_accuracy) + '  Loss: ' + str(avg_loss))
 # epochs = range(len(accuracy))
 # plt.plot(epochs, accuracy, 'g', label='Training accuracy')
 # plt.plot(epochs, loss, 'r', label='Training loss')
