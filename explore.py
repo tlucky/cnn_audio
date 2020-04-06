@@ -7,7 +7,6 @@ import pickle
 
 from keras.utils import to_categorical
 from scipy.io import wavfile
-#import scipy.io.wavfile
 from scipy.fftpack import dct
 
 from keras.layers import Conv2D, MaxPool2D, Flatten
@@ -21,7 +20,7 @@ from keras.callbacks import ModelCheckpoint
 class Config:
     # nfft=500
     def __init__(self, mode='conv', nfilt=40, nfeat=1, nfft=512, sample_rate=16000, 
-                 low_freq_mel = 0, pre_emphasis = 0.97):
+                 low_freq_mel = 0, pre_emphasis = 0.97, frame_size = 0.025):
         self.mode = mode
         self.nfilt = nfilt
         self.nfeat = nfeat
@@ -29,6 +28,7 @@ class Config:
         self.sample_rate = sample_rate
         self.low_freq_mel = low_freq_mel
         self.pre_emphasis = pre_emphasis
+        self.frame_size = frame_size
         #self.step = int(rate/10)  # hier evtl das auch ändern
         self.model_path = os.path.join('models', mode + '.model')
         self.p_path = os.path.join('pickles', mode + '.p')
@@ -45,6 +45,11 @@ def work_status(begin_str):
         return (2)  # Error
 
 def resample(arr, new_len=13856):
+    """
+    Compresses the singal to the parameter "new_len" which is mandatory for 
+    the X input to the CNN.
+
+    """
     old_len = len(arr)
     diff = old_len-new_len
     index_rand = np.random.permutation(diff)  # Random indices which are getting deleted
@@ -54,14 +59,16 @@ def resample(arr, new_len=13856):
     
 def calc_fft(frames):
     """
-    FFT and Power Spectrum
+    Calculates the FFT and Power Spectrum.
     """
     mag_frames = np.absolute(np.fft.rfft(frames, config.nfft))  # Magnitude of the FFT
     pow_frames = ((1.0 / config.nfft) * ((mag_frames) ** 2))  # Power Spectrum
     return pow_frames, mag_frames
     
 def calc_fbanks(sample_rate, pow_frames):
-    # Filter Banks
+    """
+    Calculates the Filter Banks based on the smaple rate and the power frames.
+    """
     high_freq_mel = (2595 * np.log10(1 + (sample_rate / 2) / 700))  # Convert Hz to Mel
     mel_points = np.linspace(config.low_freq_mel, high_freq_mel, config.nfilt + 2)  # Equally spaced in Mel scale
     hz_points = (700 * (10**(mel_points / 2595) - 1))  # Convert Mel to Hz
@@ -83,6 +90,9 @@ def calc_fbanks(sample_rate, pow_frames):
     return filter_banks
 
 def calc_mfcc(filter_banks):
+    """
+    Calculates the MFCC based on the Filter Bank
+    """
     num_ceps = 12
     cep_lifter = 22
     mfcc = dct(filter_banks, type=2, axis=1, norm='ortho')[:, 1 : (num_ceps + 1)] # Keep 2-13
@@ -93,6 +103,11 @@ def calc_mfcc(filter_banks):
     return mfcc
 
 def read_wav(file):
+    """
+    Reads in the wave file. Add a offset (+0.5) to the signal.
+    Emphasises the signal.
+    Compresses the signal to one length (which is the smallest file size)
+    """
     sample_rate, signal = wavfile.read('clean/'+file)
     signal = signal + 0.5
     # Conpression of the signal
@@ -101,10 +116,17 @@ def read_wav(file):
     emphasized_signal = np.append(comp_signal[0], comp_signal[1:] - config.pre_emphasis * comp_signal[:-1])
     return sample_rate, emphasized_signal
 
-def framing(sample_rate, emphasized_signal, frame_size = 0.025):
+def framing(sample_rate, emphasized_signal):
     # Framing
-    frame_stride = frame_size/2  # Overlap 50%        
-    frame_length = frame_size * sample_rate  # Convert from seconds to samples
+    """
+    Framing the singnal
+    Definition of the overlapping of 50%
+    Definition of the step size
+    ...
+    Using the hamming window
+    """
+    frame_stride = config.frame_size/2  # Overlap 50%        
+    frame_length = config.frame_size * sample_rate  # Convert from seconds to samples
     frame_step = frame_stride * sample_rate  # Convert from seconds to samples
     frame_length = int(round(frame_length))
     frame_step = int(round(frame_step))   
@@ -123,10 +145,12 @@ def framing(sample_rate, emphasized_signal, frame_size = 0.025):
     frames *= np.hamming(frame_length)  # Hamming Window
     return frames
 
-def build_X_y ():
+def build_X():
+    """
+    Building X and y for the input and output of the CNN
 
+    """
     X = []
-    y = []
     _min, _max = float('inf'), -float('inf')
     for index, file in tqdm(enumerate(df['fname'])):
         # Read the File and first processing
@@ -145,15 +169,13 @@ def build_X_y ():
         _max = max(np.amin(mfcc), _max)
 
         X.append(mfcc)
-        #y.append(classes.index(label))
     config.min = _min
     config.max = _max
-    X, y = np.array(X), np.array(y)
+    X = np.array(X)
     X = (X - _min) / (_max - _min)
     X = X.reshape(X.shape[0], X.shape[1], X.shape[2], 1)
-    y = to_categorical(y, num_classes=3)  # number of Classes:3
-    config.data = (X, y)
-    return X, y
+    config.data = (X)
+    return X
 
 def get_conv_model():
     model = Sequential()
@@ -178,6 +200,7 @@ def get_conv_model():
                   metrics=['acc'])
     return model
 
+#  Program
 df = pd.DataFrame(columns=['fname', 'label', 'length'],)  
 df['fname'] = os.listdir('./clean/')
 for index, row in df.iterrows():
@@ -190,51 +213,12 @@ classes = list(np.unique(df.label))
 class_dist = df.groupby(['label'])['label'].count()/len(df)
 prob_dist = class_dist / class_dist.sum()
 
-# Create dictionaries
-signals = {}
-fft = {}
-fbank = {}
-mfccs = {}
-
 config = Config()
 file = df['fname']
 
-#X,y = build_X_y()  # hier noch y rauslöschen
-###########
-
-
-
-X = []
+X = build_X()
 y = []
-_min, _max = float('inf'), -float('inf')
-for index, file in tqdm(enumerate(df['fname'])):
-    # Read the File and first processing
-    sample_rate, emphasized_signal = read_wav(file)     
-    label = df.iloc[index].values[1]
-    # Framing
-    
-    frames = framing(sample_rate, emphasized_signal)        
-    # Power and FFT
-    pow_frames, mag_frames = calc_fft(frames)       
-    # Filter Banks
-    filter_banks = calc_fbanks(sample_rate, pow_frames)        
-    # Mel-frequency Cepstral Coefficients (MFCCs)
-    mfcc = calc_mfcc(filter_banks)
-    
-    _min = min(np.amin(mfcc), _min)
-    _max = max(np.amin(mfcc), _max)
-    X.append(mfcc)
-
-config.min = _min
-config.max = _max
-X = np.array(X)
-X = (X - _min) / (_max - _min)
-X = X.reshape(X.shape[0], X.shape[1], X.shape[2], 1)
-
-
-#######
 y = to_categorical(df.label, num_classes=3)
-
 y_flat = np.argmax(y, axis=1)
 input_shape = (X.shape[1], X.shape[2], 1)
 
