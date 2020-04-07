@@ -1,21 +1,19 @@
 import numpy as np
-# import pandas as pd
-#import os
-# import pickle
 
 from scipy.io import wavfile
 from scipy.fftpack import dct
+
 import config_model
 
 config = config_model.Config()
-
-def resample(arr, new_len=13856):
+# https://haythamfayek.com/2016/04/21/speech-processing-for-machine-learning.html
+def resample(arr):
     """
     Compresses the singal to the parameter "new_len" which is mandatory for 
     the X input to the CNN.
     """
     old_len = len(arr)
-    diff = old_len-new_len
+    diff = old_len-config.new_len
     index_rand = np.random.permutation(diff)  # Random indices which are getting deleted
     new_arr = np.delete(arr, index_rand)
     return new_arr
@@ -61,7 +59,7 @@ def calc_mfcc(filter_banks, num_ceps = 12, cep_lifter = 22):
     mfcc *= lift  #*
     return mfcc
 
-def read_wav(file, folder='clean/', file_length=13856):
+def read_wav(file, folder='clean/'):
     """
     file_length needs to be the smallest length of the cleaned files
     ---
@@ -72,7 +70,7 @@ def read_wav(file, folder='clean/', file_length=13856):
     sample_rate, signal = wavfile.read('clean/'+file)
     signal = signal + 0.5
     # Conpression of the signal
-    comp_signal = resample(signal, file_length)
+    comp_signal = resample(signal)
     # Pre-Emphasis
     emphasized_signal = np.append(comp_signal[0], comp_signal[1:] - config.pre_emphasis * comp_signal[:-1])
     return sample_rate, emphasized_signal
