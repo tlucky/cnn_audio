@@ -21,21 +21,9 @@ from keras.callbacks import History
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import KFold
 
-class Config:
-    # nfft=500
-    def __init__(self, mode='conv', nfilt=40, nfeat=1, nfft=512, sample_rate=16000, 
-                 low_freq_mel = 0, pre_emphasis = 0.97, frame_size = 0.025):
-        self.mode = mode
-        self.nfilt = nfilt
-        self.nfeat = nfeat
-        self.nfft = nfft
-        self.sample_rate = sample_rate
-        self.low_freq_mel = low_freq_mel
-        self.pre_emphasis = pre_emphasis
-        self.frame_size = frame_size
-        #self.step = int(rate/10)  # hier evtl das auch ändern
-        self.model_path = os.path.join('models', mode + '.model')
-        self.p_path = os.path.join('pickles', mode + '.p')
+import config_model
+
+
         
 def work_status(begin_str):
     """
@@ -167,9 +155,9 @@ def build_X_y():
 
     """
     
-    tmp = check_data()
-    if tmp:
-        return tmp.data[0], tmp.data[1]  # return X, y from the pickle folder
+    # tmp = check_data()
+    # if tmp:
+    #     return tmp.data[0], tmp.data[1]  # return X, y from the pickle folder
     X = []
     _min, _max = float('inf'), -float('inf')
     for index, file in tqdm(enumerate(df['fname'])):
@@ -204,135 +192,37 @@ def build_X_y():
     
     return X, y
 
-def get_conv_model():
-    """
-    Convolutional Neural Network
-    t = 6ms/step
-    Accuracy: 0.9883833  Loss: 0.02879412667852015
-    """
-    model = Sequential()
-    model.add(Conv2D(16, (3,3), activation='relu', strides=(1, 1),
-                      padding='same',input_shape=input_shape))
-    model.add(Conv2D(32, (3, 3), activation='relu', strides=(1,1),
-                      padding='same'))
-    model.add(Conv2D(64, (3, 3), activation='relu', strides=(1,1),
-                      padding='same'))
-    model.add(Conv2D(128, (3, 3), activation='relu', strides=(1,1),
-                      padding='same'))
-    model.add(MaxPool2D((2, 2)))
-    model.add(Dropout(0.5))
-    model.add(Flatten())
-    model.add(Dense(128, activation='relu'))
-    model.add(Dense(64, activation='relu'))
-    model.add(Dense(32, activation='relu'))
-    model.add(Dense(3, activation='softmax'))
-    model.summary()
-    model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['acc'])
-    return model
+def training_type(model_name, cv=False):
+    # if cv == False:
+    #     Split into training and test data
+    #     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+        
+    #     model = get_conv_model_2() 
+        
+    if cv == True:
+        # Cross validation https://androidkt.com/k-fold-cross-validation-with-tensorflow-keras/
+        accuracy=[]
+        loss=[]
+        n_split=3
+        for train_index, test_index in KFold(n_split).split(X):
+            X_train,X_test=X[train_index],X[test_index]
+            y_train,y_test=y[train_index],y[test_index]          
+            model=model_definition.model_name        
+            model.fit(X_train, y_train, epochs=20, batch_size=32, verbose=1,
+                      callbacks=[history])
+            print('Model evaluation ',model.evaluate(X_test,y_test))
+            accuracy.append(history.history['acc'])
+            loss.append(history.history['loss'])
+    else:
+        print('Error')
 
-def get_conv_model_2():
-    """
-    Convolutional Neural Network
-    https://www.datacamp.com/community/tutorials/convolutional-neural-networks-python
-    t = 883us/step
-    Accuracy: 0.9542019  Loss: 0.11913820796104951
-    """
-    model = Sequential()
-    model.add(Conv2D(32, kernel_size=(3, 3),activation='linear',padding='same',input_shape=input_shape))
-    model.add(LeakyReLU(alpha=0.1))
-    model.add(MaxPooling2D((2, 2),padding='same'))
-    model.add(Dropout(0.25))
-    model.add(Conv2D(64, (3, 3), activation='linear',padding='same'))
-    model.add(LeakyReLU(alpha=0.1))
-    model.add(MaxPooling2D(pool_size=(2, 2),padding='same'))
-    model.add(Dropout(0.25))
-    model.add(Conv2D(128, (3, 3), activation='linear',padding='same'))
-    model.add(LeakyReLU(alpha=0.1))                  
-    model.add(MaxPooling2D(pool_size=(2, 2),padding='same'))
-    model.add(Dropout(0.4))
-    model.add(Flatten())
-    model.add(Dense(128, activation='linear'))
-    model.add(LeakyReLU(alpha=0.1))           
-    model.add(Dropout(0.3))
-    model.add(Dense(3, activation='softmax'))
-    model.summary()
-    model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['acc'])
-    return model
-
-def get_conv_model_3():
-    """
-    Acoustic event recognition using cochleagram image and convolutional neural networks (Sharan und Moir 2019) 
-    
-    t~869us/step
-    Accuracy: 0.95289737  Loss: 0.11410356166798624
-    """
-    model = Sequential()
-    model.add(Conv2D(32, kernel_size=(3, 3),activation='linear',padding='same',input_shape=input_shape))
-    model.add(LeakyReLU(alpha=0.1))
-    model.add(MaxPooling2D((2, 2),padding='same'))
-    model.add(Dropout(0.25))
-    model.add(Conv2D(64, (3, 3), activation='linear',padding='same'))
-    model.add(LeakyReLU(alpha=0.1))
-    model.add(MaxPooling2D(pool_size=(2, 2),padding='same'))
-    model.add(Dropout(0.25))
-    
-    model.add(Conv2D(128, (3, 3), activation='linear',padding='same'))
-    model.add(LeakyReLU(alpha=0.1))                  
-    model.add(MaxPooling2D(pool_size=(2, 2),padding='same'))
-    model.add(Dropout(0.4))
-    
-    model.add(Flatten())
-    
-    model.add(Dense(128, activation='linear'))
-    model.add(LeakyReLU(alpha=0.1))           
-    
-    model.add(Dense(64, activation='linear'))
-    model.add(LeakyReLU(alpha=0.1))           
-    
-    model.add(Dense(3, activation='softmax'))
-    model.summary()
-    model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['acc'])
-    return model
-
-def get_conv_model_4():
-    """
-    Deep Convolutional Neural Networks and Data Augmentation for 
-    Acoustic Event Detection (Takahashi et al. 2016)
-    
-    nicht ganz Nachbau möglich, wenig Infos
-    t = 6-7ms/step
-    Accuracy: 0.9509731  Loss: 0.1374367955702112
-    """
-    model = Sequential()
-    model.add(Conv2D(64, kernel_size=(3, 3),activation='relu',padding='same',input_shape=input_shape))
-   
-    model.add(Dropout(0.25))
-    model.add(Conv2D(64, (3, 3), activation='relu',padding='same'))
-
-    model.add(MaxPooling2D(pool_size=(1, 2),padding='same'))
-   
-    model.add(Conv2D(128, (3, 3), activation='relu',padding='same'))              
-    model.add(MaxPooling2D(pool_size=(2, 2),padding='same'))
-    
-    model.add(Conv2D(128, (3, 3), activation='relu',padding='same'))              
-    model.add(MaxPooling2D(pool_size=(2, 2),padding='same'))
-  
-    model.add(Flatten())
-    
-    model.add(Dense(1024, activation='relu'))
-    model.add(Dropout(0.5))      
-    
-    model.add(Dense(1024, activation='relu'))
-    model.add(Dropout(0.5)) 
-    model.add(Dense(28, activation='relu'))      
-    model.add(Dropout(0.5))  
-    
-    model.add(Dense(3, activation='softmax'))
-    model.summary()
-    model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['acc'])
-    return model
+    #  Results and grafic   
+    avg_accuracy = np.mean([accuracy[i][-1] for i in range(len(accuracy))])
+    avg_loss = np.mean([loss[i][-1] for i in range(len(loss))])
+    print('Accuracy: ' + str(avg_accuracy) + '  Loss: ' + str(avg_loss))
 
 #  Program
+config = config_model.Config()
 #  Importing data
 df = pd.DataFrame(columns=['fname', 'label', 'length'],)  
 df['fname'] = os.listdir('./clean/')
@@ -346,53 +236,26 @@ classes = list(np.unique(df.label))
 class_dist = df.groupby(['label'])['label'].count()/len(df)
 prob_dist = class_dist / class_dist.sum()
 
-config = Config()
-file = df['fname']
-
 #  Model
 X, y = build_X_y()
+input_shape = (X.shape[1], X.shape[2], 1)
+model_definition = config_model.ModelSpec(input_shape)
+
+file = df['fname']
 
 y_flat = np.argmax(y, axis=1)
-input_shape = (X.shape[1], X.shape[2], 1)
 
-# Split into training and test data
-#X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
-
-#model = get_conv_model_2()
-
-# class_weight = compute_class_weight('balanced', np.unique(y_flat), y_flat)
-
-early_stopping_monitor = EarlyStopping(patience=2)
 history = History()
 
 
-accuracy=[]
-loss=[]
 
-# Cross validation https://androidkt.com/k-fold-cross-validation-with-tensorflow-keras/
-n_split=3
-for train_index, test_index in KFold(n_split).split(X):
-    X_train,X_test=X[train_index],X[test_index]
-    y_train,y_test=y[train_index],y[test_index]
-  
-    model=get_conv_model()
-  
-  
-    model.fit(X_train, y_train, epochs=20, batch_size=32, verbose=1,
-              callbacks=[history])
-  
-          #,class_weight=class_weight)
-          #callbacks=[early_stopping_monitor])
-          #class_weight=class_weight)
+# class_weight = compute_class_weight('balanced', np.unique(y_flat), y_flat)
 
-    print('Model evaluation ',model.evaluate(X_test,y_test))
-    accuracy.append(history.history['acc'])
-    loss.append(history.history['loss'])
+#early_stopping_monitor = EarlyStopping(patience=2)
 
-#  Results and grafic   
-avg_accuracy = np.mean([accuracy[i][-1] for i in range(len(accuracy))])
-avg_loss = np.mean([loss[i][-1] for i in range(len(loss))])
-print('Accuracy: ' + str(avg_accuracy) + '  Loss: ' + str(avg_loss))
+
+training_type(model_name='get_conv_model_5()', cv=True)
+
 # epochs = range(len(accuracy))
 # plt.plot(epochs, accuracy, 'g', label='Training accuracy')
 # plt.plot(epochs, loss, 'r', label='Training loss')
