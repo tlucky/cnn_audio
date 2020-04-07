@@ -1,28 +1,28 @@
-import numpy as np
-import pandas as pd
+# import numpy as np
+# import pandas as pd
 import os
-from tqdm import tqdm
+# from tqdm import tqdm
 
-import pickle
+# import pickle
 
-from keras.utils import to_categorical
-from scipy.io import wavfile
-from scipy.fftpack import dct
+# from keras.utils import to_categorical
+# from scipy.io import wavfile
+# from scipy.fftpack import dct
 
 from keras.layers import Conv2D, MaxPool2D, Flatten
 from keras.layers import LeakyReLU, MaxPooling2D
-from keras.layers import Dropout, Dense, TimeDistributed
+from keras.layers import Dropout, Dense
+
 from keras.models import Sequential
-from sklearn.utils.class_weight import compute_class_weight
-import matplotlib.pyplot as plt
-from keras.callbacks import ModelCheckpoint
-from keras.callbacks import EarlyStopping
-from keras.callbacks import History
-from sklearn.model_selection import train_test_split
-from sklearn.model_selection import KFold
+# from sklearn.utils.class_weight import compute_class_weight
+# import matplotlib.pyplot as plt
+# from keras.callbacks import ModelCheckpoint
+# from keras.callbacks import EarlyStopping
+# from keras.callbacks import History
+# from sklearn.model_selection import train_test_split
+# from sklearn.model_selection import KFold
 
 class Config:
-    # nfft=500
     def __init__(self, mode='conv', nfilt=40, nfeat=1, nfft=512, sample_rate=16000, 
                  low_freq_mel = 0, pre_emphasis = 0.97, frame_size = 0.025):
         self.mode = mode
@@ -40,7 +40,6 @@ class Config:
 class ModelSpec:
     def __init__(self, input_shape):
         self.input_shape = input_shape
-
     
     def get_conv_model(self):
         """
