@@ -25,7 +25,7 @@ from keras.models import Sequential
 class Config:
     def __init__(self, mode='conv', nfilt=40, nfeat=1, nfft=512, sample_rate=16000, 
                  low_freq_mel = 0, pre_emphasis = 0.97, frame_size = 0.025, 
-                 new_len=13856):
+                 new_len=13856, num_ceps = 12, cep_lifter = 22):
         self.mode = mode
         self.nfilt = nfilt
         self.nfeat = nfeat
@@ -35,6 +35,8 @@ class Config:
         self.pre_emphasis = pre_emphasis
         self.frame_size = frame_size
         self.new_len = new_len
+        self.num_ceps = num_ceps
+        self.cep_lifter = cep_lifter
         #self.step = int(rate/10)  # hier evtl das auch ändern
         self.model_path = os.path.join('models', mode + '.model')
         self.p_path = os.path.join('pickles', mode + '.p')

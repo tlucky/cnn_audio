@@ -61,7 +61,7 @@ def build_X_y():
     for index, file in tqdm(enumerate(df['fname'])):        
         sample_rate, emphasized_signal = sp.read_wav(file)  # Read & 1. processing
         frames = sp.framing(sample_rate, emphasized_signal)  # Framing       
-        pow_frames, mag_frames = sp.calc_fft(frames)  # Power and FFT      
+        pow_frames, mag_frames = sp.calc_stft(frames)  # Power and FFT      
         filter_banks = sp.calc_fbanks(sample_rate, pow_frames)  # Filter Banks       
         mfcc = sp.calc_mfcc(filter_banks)  # Mel-frequency Cepstral Coefficients (MFCCs)     
         _min = min(np.amin(mfcc), _min)

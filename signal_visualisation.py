@@ -5,9 +5,9 @@ import os
 from scipy.io import wavfile
 import signal_processing as sp   
 
-import imageio
-
 import config_model
+
+
 config = config_model.Config()
 
 def work_status(begin_str):
@@ -22,94 +22,129 @@ def work_status(begin_str):
         return (2)  # Error
                   
 def plot_wav(signals):
-    fig, axes = plt.subplots(nrows=1, ncols=3, sharex=False,
+    fig, ax = plt.subplots(nrows=1, ncols=3, sharex=False,
                              sharey=True, figsize=(20,5))
     fig.suptitle('Emphasized Signal', size=16)
     
-    scale = config.new_len/config.sample_rate*1000  # ms
+    scale = config.new_len / config.sample_rate * 1000  # ms
     x_ticklabels = np.arange(0, int(scale),int(scale/8))
-    scale = len(signals['Open'])
-    x_ticks = np.arange(0, scale,int(scale/8))
+    
+    x_ticks = np.arange(0, config.new_len,int(config.new_len/8))
 
-    axes[0].set_ylabel('Amplitude [?]')
-
+    ax[0].set_ylabel('Amplitude [?]')
   
     for y in range(3):
-            axes[y].set_title(list(signals.keys())[y])
-            axes[y].plot(list(signals.values())[y])  
-            axes[y].set_xlim(0, scale)
-            axes[y].set_xticks(x_ticks)
-            axes[y].set_xticklabels(x_ticklabels)
-            axes[y].set_xlabel('Zeit [ms]')
-            axes[y].set_xlim
+            ax[y].set_title(list(signals.keys())[y])
+            ax[y].plot(list(signals.values())[y])  
+            ax[y].set_xlim(0, config.new_len)
+            ax[y].set_xticks(x_ticks)
+            ax[y].set_xticklabels(x_ticklabels)
+            ax[y].set_xlabel('Zeit [ms]')
+            ax[y].grid(linestyle='-')
     #plt.show()
+
+def plot_fft(fft):
+    fig, ax = plt.subplots(nrows=1, ncols=3, sharex=False,
+                             sharey=True, figsize=(20,5))
+    fig.suptitle('Fourier Tranformation', size=16)
+    ax[0].set_ylabel('Amplitude')
+    for y in range(3):
+        data = list(ffts.values())[y]
+        Y, freq = data[0], data[1]
+        ax[y].set_title(list(ffts.keys())[y])
+        ax[y].plot(freq, Y)  
+        ax[y].set_xlim(0, freq[-1])
+        if y==0: ax[y].set_ylim(0, max(Y)*1.05)
+        ax[y].set_xlabel('Frequenz [Hz]')
+        ax[y].fill_between(freq, Y)  # Fills the area under the plot
+        ax[y].grid(linestyle='-')
+
+def plot_fft_hamming(fft_hamming):
+    fig, ax = plt.subplots(nrows=1, ncols=3, sharex=False,
+                             sharey=True, figsize=(20,5))
+    fig.suptitle('Fourier Transformation mit Hamming Fenster', size=16)
+    ax[0].set_ylabel('Amplitude')
+    for y in range(3):
+        data = list(ffts_hamming.values())[y]
+        Y, freq = data[0], data[1]
+        ax[y].set_title(list(ffts_hamming.keys())[y])
+        ax[y].plot(freq, Y)  
+        ax[y].set_xlim(0, freq[-1])
+        if y==0: ax[y].set_ylim(0, max(Y)*1.05)
+        ax[y].set_xlabel('Frequenz [Hz]')
+        ax[y].fill_between(freq, Y)  # Fills the area under the plot
+        ax[y].grid(linestyle='-')
         
-def plot_fft(mag_frames):        
-    fig, axes = plt.subplots(nrows=1, ncols=3, sharex=False,
+def plot_stft(mag_frames):        
+    fig, ax = plt.subplots(nrows=1, ncols=3, sharex=False,
                              sharey=True, figsize=(20,5))
     fig.suptitle('STFT', size=16)    
-    scale = config.new_len/config.sample_rate*1000  # ms
-    x_ticklabels = np.arange(0, int(scale),int(scale/8))
-    scale = len(signals['Open'])
-    x_ticks = np.arange(0, scale,int(scale/8))
-    axes[0].set_ylabel('Frequenz [Hz]')  
-
+    
+    scale = config.new_len / config.sample_rate * 1000  # ms
+    #x_ticklabels = np.arange(0, int(scale),int(scale/8))
+    #scale = len(signals['Open'])
+    #x_ticks = np.arange(0, scale,int(scale/8))
+    #x_ticks = np.arange(0, config.new_len,int(config.new_len/8))
+    ax[0].set_ylabel('Frequenz [Hz]')  
+    
     for y in range(3):
-        axes[y].set_title(list(ffts.keys())[y])
-        axes[y].imshow(list(ffts.values())[y].T, #extent=[0,T,0,4],
-                cmap=plt.cm.jet, aspect='auto' )
-        axes[y].invert_yaxis()
-        #axes[y].set_xticks(x_ticks)
-        #axes[y].set_xticklabels(x_ticklabels)
-        axes[y].set_xlabel('Zeit [ms]') 
+        ax[y].set_title(list(stfts.keys())[y])
+        im = ax[y].imshow(list(stfts.values())[y].T,#extent=[0,T,0,4],
+                       cmap=plt.cm.jet, aspect='auto',vmin=0.0,vmax=17.5) # 
+        ax[y].invert_yaxis()
+        #ax[y].set_xticks(x_ticks)
+        #ax[y].set_xticklabels(x_ticklabels)
+        ax[y].set_xlabel('Zeit [ms]') 
+    fig.colorbar(im,ax=ax[2])  # shows the colorbar one
     #plt.show()
         
 def plot_banks(fbanks): 
-    fig, axes = plt.subplots(nrows=1, ncols=3, sharex=False,
+    fig, ax = plt.subplots(nrows=1, ncols=3, sharex=False,
                              sharey=True, figsize=(20,5))
     fig.suptitle('Filter Banks', size=16)
-    axes[0].set_ylabel('Frequenz [Hz]')
+    ax[0].set_ylabel('Frequenz [Hz]')
 
 
     for y in range(3):
-        axes[y].set_title(list(fbanks.keys())[y])
-        axes[y].imshow(list(fbanks.values())[y].T,
+        ax[y].set_title(list(fbanks.keys())[y])
+        ax[y].imshow(list(fbanks.values())[y].T,
                 cmap=plt.cm.jet, aspect='auto' )
-        axes[y] = plt.gca()
-        axes[y].invert_yaxis()
-        axes[y].set_xlabel('Zeit [ms]')  
+        ax[y] = plt.gca()
+        ax[y].invert_yaxis()
+        ax[y].set_xlabel('Zeit [ms]')  
     #plt.show()       
 
 def plot_banks_norm(fbanks):        
-    fig, axes = plt.subplots(nrows=1, ncols=3, sharex=False,
+    fig, ax = plt.subplots(nrows=1, ncols=3, sharex=False,
                              sharey=True, figsize=(20,5))
     fig.suptitle('Filter Banks Mean Normalization', size=16)
-    axes[0].set_ylabel('Frequenz [Hz]')
-    axes[0].set_xlabel('Zeit [ms]')  
+    ax[0].set_ylabel('Frequenz [Hz]')
+    ax[0].set_xlabel('Zeit [ms]')  
 
     for y in range(3):
-        axes[y].set_title(list(fbanks.keys())[y])
-        axes[y].imshow(list(fbanks.values())[y].T,
+        ax[y].set_title(list(fbanks.keys())[y])
+        ax[y].imshow(list(fbanks.values())[y].T,
                 cmap=plt.cm.jet, aspect='auto')
-        axes[y] = plt.gca()
-        axes[y].invert_yaxis()
-        axes[y].set_xlabel('Zeit [ms]')  
+        ax[y] = plt.gca()
+        ax[y].invert_yaxis()
+        ax[y].set_xlabel('Zeit [ms]')  
     #plt.show()   
 
 def plot_mfcc(mfccs):
-    fig, axes = plt.subplots(nrows=1, ncols=3, sharex=False,
+    fig, ax = plt.subplots(nrows=1, ncols=3, sharex=False,
                              sharey=True, figsize=(20,5))
     fig.suptitle('MFCC', size=16)
-    axes[0].set_ylabel('Cepstrum Index')
-    axes[0].set_xlabel('Zeit [ms]') 
+    ax[0].set_ylabel('MFCC Koeffizienten')
+    ax[0].set_xlabel('Zeit [ms]') 
     
     for y in range(3):
-        axes[y].set_title(list(mfccs.keys())[y])
-        axes[y].imshow(list(mfccs.values())[y].T,
-                cmap=plt.cm.jet, aspect='auto')
-        axes[y] = plt.gca()
-        axes[y].invert_yaxis()
-        axes[y].set_xlabel('Zeit [ms]')  
+        ax[y].set_title(list(mfccs.keys())[y])
+        ax[y].imshow(list(mfccs.values())[y].T, 
+                       #extent=[0, T, 0, config.num_ceps],
+                       cmap=plt.cm.jet, aspect='auto')
+        ax[y] = plt.gca()
+        ax[y].invert_yaxis()
+        ax[y].set_xlabel('Zeit [ms]')  
     plt.show() 
        
         
@@ -131,6 +166,8 @@ prob_dist = class_dist / class_dist.sum()
 signals = {}
 framed = {}
 ffts = {}
+ffts_hamming = {}
+stfts = {}
 fbanks = {}
 fbanks_norm = {}
 mfccs = {}
@@ -140,24 +177,32 @@ dict_status = {0:'Open', 1:'Close', 2:'Error'}
 for c in classes:   
     file = df[df.label==c].iloc[3,0]
     sample_rate, emphasized_signal = sp.read_wav(file)  # Read & 1. processing
+    
+    Y, freq = sp.calc_fft(emphasized_signal, sample_rate)  # FFT
+    Y_h, freq_h= sp.calc_fft(emphasized_signal*np.hamming(len(emphasized_signal)), sample_rate)
+    
     frames = sp.framing(sample_rate, emphasized_signal)  # Framing       
-    pow_frames, mag_frames = sp.calc_fft(frames)  # Power and FFT      
+    pow_frames, mag_frames = sp.calc_stft(frames)  # Power and FFT      
     filter_banks = sp.calc_fbanks(sample_rate, pow_frames)  # Filter Banks  
     fbnorm = filter_banks - (np.mean(filter_banks, axis=0) + 1e-8) # Mean Normalization      
     mfcc = sp.calc_mfcc(filter_banks)  # MFCC
     #  Store in dict
     c = dict_status[c]
     signals[c] = emphasized_signal
+    ffts[c] = Y, freq
+    ffts_hamming[c] = Y_h, freq_h
     framed[c] = frames
-    ffts[c] = mag_frames
+    stfts[c] = mag_frames
     fbanks[c] = filter_banks
     mfccs[c] = mfcc      
     fbanks_norm[c]=fbnorm
 
 #  Plotting    
 plot_wav(signals)
-plot_fft(mag_frames)
+plot_fft(ffts)
+plot_fft_hamming(ffts_hamming)
+plot_stft(stfts)
 plot_banks(fbanks)
-plot_banks_norm(fbanks_norm)
-plot_mfcc(mfccs)
+# plot_banks_norm(fbanks_norm)
+# plot_mfcc(mfccs)
 
