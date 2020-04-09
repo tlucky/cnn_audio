@@ -64,7 +64,7 @@ def plot_fft(fft):
         ax[y].plot(freq, Y)  
         ax[y].set_xlim(0, freq[-1])
         if y==0: ax[y].set_ylim(0, max(Y)*1.05)
-        ax[y].set_xlabel('Frequenz [Hz]')
+        ax[y].set_xlabel('Frequenz [kHz]')
         ax[y].fill_between(freq, Y)  # Fills the area under the plot
         ax[y].grid(linestyle='-')
 
@@ -80,7 +80,7 @@ def plot_fft_hamming(fft_hamming):
         ax[y].plot(freq, Y)  
         ax[y].set_xlim(0, freq[-1])
         if y==0: ax[y].set_ylim(0, max(Y)*1.05)
-        ax[y].set_xlabel('Frequenz [Hz]')
+        ax[y].set_xlabel('Frequenz [kHz]')
         ax[y].fill_between(freq, Y)  # Fills the area under the plot
         ax[y].grid(linestyle='-')
 
@@ -98,26 +98,23 @@ def plot_stft(mag_frames):
                                      max_new_total=10, n_ticks=11)
     ax[0].set_yticks(ynew_dist)
     ax[0].set_yticklabels(ylabel)  # Range from 0 - 10.000 Hz    
-    ax[0].set_ylabel('Frequenz [Hz]')      
+    ax[0].set_ylabel('Frequenz [kHz]')      
     for y in range(3):
         ax[y].set_title(list(stfts.keys())[y])
         im = ax[y].imshow(list(stfts.values())[y].T,#extent=[0,T,0,4],
                        cmap=plt.cm.jet, aspect='auto',vmin=0.0,vmax=17.5) # 
-        #  x-axis
-        ax[y].set_xlim(0, x_tick-1)
+        ax[y].set_xlim(0, x_tick-0.5)
         ax[y].set_xticks(xnew_dist)
         ax[y].set_xticklabels(xlabel)
         ax[y].set_xlabel('Zeit [ms]')
-        #  y-axis
-        ax[y].invert_yaxis()
-        ax[y].set_xlabel('Zeit [ms]') 
+        ax[y].invert_yaxis() 
         ax[y].set_ylim(0, y_tick)
 
     fig.colorbar(im,ax=ax[2])  # shows the colorbar one
         
 def plot_banks(fbanks): 
     fig, ax = plt.subplots(nrows=1, ncols=3, sharex=False,
-                             sharey=True, figsize=(20,5))
+                             sharey=True, figsize=(15,5))
     fig.suptitle('Filter Banks', size=16)
     
     x_tick, y_tick = fbanks['Open'].shape  
@@ -126,25 +123,27 @@ def plot_banks(fbanks):
     
     ynew_dist, ylabel = rescale_axis(max_old_total=y_tick,max_new_scale=10,
                                      max_new_total=10, n_ticks=11)
-    ax[0].set_yticks(ynew_dist)
-    ax[0].set_yticklabels(ylabel)  # Range from 0 - 10.000 Hz
-    ax[0].set_ylabel('Frequenz [Hz]')
+    
+    ax[0].set_ylabel('Frequenz [kHz]')
     
     for y in range(3):
         ax[y].set_title(list(fbanks.keys())[y])
-        ax[y].imshow(list(fbanks.values())[y].T,
+        im = ax[y].imshow(list(fbanks.values())[y].T,
                 cmap=plt.cm.jet, aspect='auto' )
         ax[y].set_ylim(y_tick, 0)
-        ax[y].set_xlim(0, x_tick-1)
+        ax[y].set_xlim(0, x_tick-0.5)
         ax[y].set_xticks(xnew_dist)
         ax[y].set_xticklabels(xlabel)
-        ax[y].set_xlabel('Zeit [ms]') 
+        ax[y].set_xlabel('Zeit [ms]')
+        ax[y].set_yticks(ynew_dist)
+        ax[y].set_yticklabels(ylabel)
         ax[y] = plt.gca()
         ax[y].invert_yaxis()
+    fig.colorbar(im,ax=ax[2])
 
 def plot_banks_norm(fbanks_norm):        
     fig, ax = plt.subplots(nrows=1, ncols=3, sharex=False,
-                             sharey=True, figsize=(20,5))
+                             sharey=True, figsize=(15,5))
     fig.suptitle('Filter Banks Mean Normalization', size=16)
 
     x_tick, y_tick = fbanks_norm['Open'].shape  
@@ -153,26 +152,31 @@ def plot_banks_norm(fbanks_norm):
     
     ynew_dist, ylabel = rescale_axis(max_old_total=y_tick,max_new_scale=10,
                                      max_new_total=10, n_ticks=11)
-    ax[0].set_yticks(ynew_dist)
-    ax[0].set_yticklabels(ylabel)  # Range from 0 - 10.000 Hz
-    ax[0].set_ylabel('Frequenz [Hz]')
+
+    ax[0].set_ylabel('Frequenz [kHz]')
     
     for y in range(3):
         ax[y].set_title(list(fbanks_norm.keys())[y])
-        ax[y].imshow(list(fbanks_norm.values())[y].T,
+        im = ax[y].imshow(list(fbanks_norm.values())[y].T,
                 cmap=plt.cm.jet, aspect='auto' )
         ax[y].set_ylim(y_tick, 0)
         ax[y].set_xlim(0, x_tick-1)
         ax[y].set_xticks(xnew_dist)
         ax[y].set_xticklabels(xlabel)
         ax[y].set_xlabel('Zeit [ms]') 
+        ax[y].set_yticks(ynew_dist)
+        ax[y].set_yticklabels(ylabel)  # Range from 0 - 10.000 Hz
         ax[y] = plt.gca()
         ax[y].invert_yaxis()
+    fig.colorbar(im,ax=ax[2])
 
 def plot_mfcc(mfccs):
-    fig, ax = plt.subplots(nrows=1, ncols=3, sharex=False,
-                             sharey=True, figsize=(20,5))
-    fig.suptitle('MFCC', size=16)
+    fig, ax = plt.subplots(nrows=1, ncols=3, sharex=False, sharey=True,
+                           figsize=(15,5))
+    
+    #fig.suptitle('MFCC', size=16)
+    
+    fig.tight_layout()
     x_tick, y_tick = mfccs['Open'].shape  
     xnew_dist, xlabel = rescale_axis(max_old_total=x_tick, max_new_scale=800,
                                  max_new_total=config.len_ms(), n_ticks=9)
@@ -180,17 +184,16 @@ def plot_mfcc(mfccs):
     
     for y in range(3):
         ax[y].set_title(list(mfccs.keys())[y])
-        ax[y].imshow(list(mfccs.values())[y].T, cmap=plt.cm.jet, aspect='auto')
-        ax[y].set_ylim(y_tick-1, 0)
-        ax[y].set_xlim(0, x_tick-1)
+        im = ax[y].imshow(list(mfccs.values())[y].T, cmap=plt.cm.jet, 
+                          aspect='auto',vmin=-400,vmax=425)
+        # ax[y].set_ylim(y_tick-0.5, 0)
+        ax[y].set_xlim(0, x_tick-0.5)
         ax[y].set_xticks(xnew_dist)
         ax[y].set_xticklabels(xlabel)
+        ax[y].set_xlabel('Zeit [ms]')
         ax[y] = plt.gca()
-        ax[y].set_xlabel('Zeit [ms]') 
         ax[y].invert_yaxis()
-         
-
-        
+    fig.colorbar(im,ax=ax[2])        
         
 #  Program        
 #  Importing data
@@ -241,13 +244,18 @@ for c in classes:
     mfccs[c] = mfcc      
     fbanks_norm[c]=fbnorm
 
+#  Definitions of the font sizes of the plots
+plt.rc('font', size =14)
+plt.rc('axes', titlesize=16)
+plt.rc('axes', labelsize=14)
+# plt.rc('legend', fontsize=16)
 
 #  Plotting    
-# plot_wav(signals)
-# plot_fft(ffts)
-# plot_fft_hamming(ffts_hamming)
-# plot_stft(stfts)
-# plot_banks(fbanks)
-# plot_banks_norm(fbanks_norm)
-plot_mfcc(mfccs)
+# p1=plot_wav(signals)
+# p2=plot_fft(ffts)
+# p3=plot_fft_hamming(ffts_hamming)
+p4=plot_stft(stfts)
+# p5=plot_banks(fbanks)
+# p6=plot_banks_norm(fbanks_norm)
+p7=plot_mfcc(mfccs)
 
