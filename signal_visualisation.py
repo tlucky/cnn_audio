@@ -4,10 +4,8 @@ import pandas as pd
 import os
 from scipy.io import wavfile
 import signal_processing as sp   
-
 import config_model
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-from mpl_toolkits import axes_grid1
+
 config = config_model.Config()
 
 def work_status(begin_str):
@@ -20,9 +18,6 @@ def work_status(begin_str):
         return (1)  # Close
     if begin_str.startswith('Q') == True:
         return (2)  # Error
-
-# def rounddown(x, round_to):
-#     return int(int(x / round_to)) * round_to
 
 def rescale_axis(max_old_total, max_new_total, max_new_scale, n_ticks): #, max_old=config.len_ms()):
     """
@@ -43,7 +38,7 @@ def plot_wav(signals, title=True):
     xnew_dist, xlabel = rescale_axis(max_old_total=x_tick, max_new_scale=800,
                                      max_new_total=config.len_ms(), n_ticks=9)
     ax[0].set_ylabel('Amplitude')
-  
+    # ax[0].set_ylim(-0.65, 0.65)  # can be removed
     for y in range(3):
             ax[y].set_title(list(signals.keys())[y])
             ax[y].plot(list(signals.values())[y])  
@@ -59,11 +54,11 @@ def plot_fft(fft, title=True):
     if title==True: 
         fig.suptitle('Fourier Tranformation', size=16)
     fig.tight_layout()
-    plt.figtext(0, 0.95,r'$10³ \times$')
+    plt.figtext(0, 0.95, r'$\times10⁻³$')
     ax[0].set_ylabel('Amplitude')
     for y in range(3):
         data = list(ffts.values())[y]
-        Y, freq = data[0]*1000, data[1]
+        Y, freq = data[0]*1000, data[1]/1000
         ax[y].set_title(list(ffts.keys())[y])
         ax[y].plot(freq, Y)  
         ax[y].set_xlim(0, freq[-1])
@@ -78,15 +73,16 @@ def plot_fft_hamming(fft_hamming, title=True):
     if title==True: 
         fig.suptitle('Fourier Transformation mit Hamming Fenster', size=16)
     fig.tight_layout()   
-    plt.figtext(0, 0.95,r'$10³ \times$')
+    plt.figtext(0, 0.96, r'$\times10⁻³$')
     ax[0].set_ylabel('Amplitude')
+    ax[0].set_ylim(0, 3)  # can be removed
     for y in range(3):
         data = list(ffts_hamming.values())[y]
-        Y, freq = data[0]*1000, data[1]
+        Y, freq = data[0]*1000, data[1]/1000
         ax[y].set_title(list(ffts_hamming.keys())[y])
         ax[y].plot(freq, Y)  
         ax[y].set_xlim(0, freq[-1])
-        if y==0: ax[y].set_ylim(0, max(Y)*1.05)
+        # if y==0: ax[y].set_ylim(0, max(Y)*1.05)
         ax[y].set_xlabel('Frequenz [kHz]')
         ax[y].fill_between(freq, Y)  # Fills the area under the plot
         ax[y].grid(linestyle='-')
@@ -138,7 +134,7 @@ def plot_banks(fbanks, title=True, col_bar=True):
     for y in range(3):
         ax[y].set_title(list(fbanks.keys())[y])
         im = ax[y].imshow(list(fbanks.values())[y].T,
-                cmap=plt.cm.jet, aspect='auto' )
+                cmap=plt.cm.jet, aspect='auto')
         ax[y].set_ylim(y_tick, 0)
         ax[y].set_xlim(0, x_tick-0.5)
         ax[y].set_xticks(xnew_dist)
@@ -169,7 +165,7 @@ def plot_banks_norm(fbanks_norm, title=True, col_bar=True):
     for y in range(3):
         ax[y].set_title(list(fbanks_norm.keys())[y])
         im = ax[y].imshow(list(fbanks_norm.values())[y].T,
-                cmap=plt.cm.jet, aspect='auto' )
+                cmap=plt.cm.jet, aspect='auto')
         ax[y].set_ylim(y_tick, 0)
         ax[y].set_xlim(0, x_tick-1)
         ax[y].set_xticks(xnew_dist)
@@ -222,6 +218,7 @@ classes = list(np.unique(df.label))
 class_dist = df.groupby(['label'])['label'].count()/len(df)
 prob_dist = class_dist / class_dist.sum()
 
+
 #  Create dictionaries
 signals = {}
 framed = {}
@@ -235,7 +232,7 @@ dict_status = {0:'Open', 1:'Close', 2:'Error'}
 
 #  Calculation
 for c in classes:   
-    file = df[df.label==c].iloc[3,0]
+    file = df[df.label==c].iloc[1,0]
     sample_rate, emphasized_signal = sp.read_wav(file)  # Read & 1. processing    
     Y, freq = sp.calc_fft(emphasized_signal, sample_rate)  # FFT
     Y_h, freq_h= sp.calc_fft(emphasized_signal*np.hamming(len(emphasized_signal)), sample_rate)    
@@ -262,13 +259,27 @@ plt.rc('axes', labelsize=14)
 # plt.rc('legend', fontsize=16)
 
 #  Plotting 
-col_bar = False  
+col_bar = True  
 title = False 
+save = False
+    
 p1=plot_wav(signals, title=title)
-p2=plot_fft(ffts, title=title)
-p3=plot_fft_hamming(ffts_hamming, title=title)
-p4=plot_stft(stfts, title=title, col_bar=col_bar)
-p5=plot_banks(fbanks, title=title, col_bar=col_bar)
-p6=plot_banks_norm(fbanks_norm, title=title, col_bar=col_bar)
-p7=plot_mfcc(mfccs, title=title, col_bar=col_bar)
+if save == True: plt.savefig('figures/p' + str(1) + '.png')
 
+p2=plot_fft(ffts, title=title)
+if save == True: plt.savefig('figures/p' + str(2) + '.png')
+
+p3=plot_fft_hamming(ffts_hamming, title=title)
+if save == True: plt.savefig('figures/p' + str(2) + '.png')
+
+p4=plot_stft(stfts, title=title, col_bar=col_bar)
+if save == True: plt.savefig('figures/p' + str(4) + '.png')
+
+p5=plot_banks(fbanks, title=title, col_bar=col_bar)
+if save == True: plt.savefig('figures/p' + str(5) + '.png')
+
+p6=plot_banks_norm(fbanks_norm, title=title, col_bar=col_bar)
+if save == True: plt.savefig('figures/p' + str(6) + '.png')
+
+p7=plot_mfcc(mfccs, title=title, col_bar=col_bar)
+if save == True: plt.savefig('figures/p' + str(7) + '.png')
