@@ -4,9 +4,7 @@ import pandas as pd
 import os
 from scipy.io import wavfile
 import signal_processing as sp   
-import config_model
-
-config = config_model.Config()
+import config
 
 def work_status(begin_str):
     """
@@ -19,7 +17,7 @@ def work_status(begin_str):
     if begin_str.startswith('Q') == True:
         return (2)  # Error
 
-def rescale_axis(max_old_total, max_new_total, max_new_scale, n_ticks): #, max_old=config.len_ms()):
+def rescale_axis(max_old_total, max_new_total, max_new_scale, n_ticks): #, max_old=config.len_ms:
     """
     Calculates the arrays which are needed for resizing the y-axis    
     """   
@@ -36,7 +34,7 @@ def plot_wav(signals, title=True):
         fig.suptitle('Emphasized Signal', size=16)
     x_tick = signals['Open'].shape[0]     
     xnew_dist, xlabel = rescale_axis(max_old_total=x_tick, max_new_scale=800,
-                                     max_new_total=config.len_ms(), n_ticks=9)
+                                     max_new_total=config.len_ms, n_ticks=9)
     ax[0].set_ylabel('Amplitude')
     # ax[0].set_ylim(-0.65, 0.65)  # can be removed
     for y in range(3):
@@ -96,7 +94,7 @@ def plot_stft(mag_frames, title=True, col_bar=True):
     x_tick, y_tick = stfts['Open'].shape  
     fig.tight_layout()
     xnew_dist, xlabel = rescale_axis(max_old_total=x_tick, max_new_scale=800,
-                                     max_new_total=config.len_ms(), n_ticks=9)
+                                     max_new_total=config.len_ms, n_ticks=9)
     
     ynew_dist, ylabel = rescale_axis(max_old_total=y_tick,max_new_scale=10,
                                      max_new_total=10, n_ticks=11)
@@ -124,7 +122,7 @@ def plot_banks(fbanks, title=True, col_bar=True):
     fig.tight_layout()
     x_tick, y_tick = fbanks['Open'].shape  
     xnew_dist, xlabel = rescale_axis(max_old_total=x_tick, max_new_scale=800,
-                                     max_new_total=config.len_ms(), n_ticks=9)
+                                     max_new_total=config.len_ms, n_ticks=9)
     
     ynew_dist, ylabel = rescale_axis(max_old_total=y_tick,max_new_scale=10,
                                      max_new_total=10, n_ticks=11)
@@ -155,7 +153,7 @@ def plot_banks_norm(fbanks_norm, title=True, col_bar=True):
     fig.tight_layout()
     x_tick, y_tick = fbanks_norm['Open'].shape  
     xnew_dist, xlabel = rescale_axis(max_old_total=x_tick, max_new_scale=800,
-                                     max_new_total=config.len_ms(), n_ticks=9)
+                                     max_new_total=config.len_ms, n_ticks=9)
     
     ynew_dist, ylabel = rescale_axis(max_old_total=y_tick,max_new_scale=10,
                                      max_new_total=10, n_ticks=11)
@@ -187,7 +185,7 @@ def plot_mfcc(mfccs, title=True, col_bar=True):
     fig.tight_layout()
     x_tick, y_tick = mfccs['Open'].shape  
     xnew_dist, xlabel = rescale_axis(max_old_total=x_tick, max_new_scale=800,
-                                 max_new_total=config.len_ms(), n_ticks=9)
+                                 max_new_total=config.len_ms, n_ticks=9)
     ax[0].set_ylabel('MFCC Koeffizienten')
     
     for y in range(3):
@@ -204,7 +202,9 @@ def plot_mfcc(mfccs, title=True, col_bar=True):
     if col_bar==True:    
         fig.colorbar(im,ax=ax[2])        
         
-#  Program        
+#  Program      
+config = config.Config()
+  
 #  Importing data
 df = pd.DataFrame(columns=['fname', 'label', 'length'],)  
 df['fname'] = os.listdir('./clean/')
@@ -217,7 +217,6 @@ for index, row in df.iterrows():
 classes = list(np.unique(df.label))
 class_dist = df.groupby(['label'])['label'].count()/len(df)
 prob_dist = class_dist / class_dist.sum()
-
 
 #  Create dictionaries
 signals = {}
@@ -233,17 +232,19 @@ dict_status = {0:'Open', 1:'Close', 2:'Error'}
 #  Calculation
 for c in classes:   
     file = df[df.label==c].iloc[1,0]
-    sample_rate, emphasized_signal = sp.read_wav(file)  # Read & 1. processing    
-    Y, freq = sp.calc_fft(emphasized_signal, sample_rate)  # FFT
-    Y_h, freq_h= sp.calc_fft(emphasized_signal*np.hamming(len(emphasized_signal)), sample_rate)    
-    frames = sp.framing(sample_rate, emphasized_signal)  # Framing       
+    sample_rate, signal = wavfile.read('clean/'+file)
+    # sample_rate, signal = sp.read_wav(folder='clean/',file=file)  # Read & 1. processing    
+    Y, freq = sp.calc_fft(signal, sample_rate)  # FFT
+    Y_h, freq_h= sp.calc_fft(signal*np.hamming(len(signal)), sample_rate)    
+    frames = sp.framing(sample_rate, signal)  # Framing       
     pow_frames, mag_frames = sp.calc_stft(frames)  # Power and FFT      
     filter_banks = sp.calc_fbanks(sample_rate, pow_frames)  # Filter Banks  
     fbnorm = filter_banks - (np.mean(filter_banks, axis=0) + 1e-8) # Mean Normalization      
     mfcc = sp.calc_mfcc(filter_banks)  # MFCC
+    
     #  Store in dict
     c = dict_status[c]
-    signals[c] = emphasized_signal
+    signals[c] = signal
     ffts[c] = Y, freq
     ffts_hamming[c] = Y_h, freq_h
     framed[c] = frames
@@ -261,7 +262,7 @@ plt.rc('axes', labelsize=14)
 #  Plotting 
 col_bar = True  
 title = False 
-save = False
+save = True
     
 p1=plot_wav(signals, title=title)
 if save == True: plt.savefig('figures/p' + str(1) + '.png')

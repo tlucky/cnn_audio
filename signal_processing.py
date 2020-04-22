@@ -1,11 +1,9 @@
 import numpy as np
-
-from scipy.io import wavfile
 from scipy.fftpack import dct
 
-import config_model
+import config
 
-config = config_model.Config()
+config = config.Config()
 
 def resample(arr):
     """
@@ -20,23 +18,25 @@ def resample(arr):
 
 # https://haythamfayek.com/2016/04/21/speech-processing-for-machine-learning.html    
 
-def read_wav(file, folder='clean/'):
-    """
-    file_length needs to be the smallest length of the cleaned files
-    ---
-    Reads in the wave file. Add a offset (+0.5) to the signal.
-    Emphasises the signal.
-    Compresses the signal to one length (which is the smallest file size)
-    """
-    sample_rate, signal = wavfile.read('clean/'+file)
-    signal = signal + 0.5
-    # Conpression of the signal
-    comp_signal = resample(signal)
-    # Pre-Emphasis
-    emphasized_signal = np.append(comp_signal[0], comp_signal[1:] - config.pre_emphasis * comp_signal[:-1])
-    return sample_rate, emphasized_signal
+# def read_wav(file):
+#     """
+#     file_length needs to be the smallest length of the cleaned files
+#     ---
+#     Reads in the wave file. Add a offset (+0.5) to the signal.
+#     Emphasises the signal.
+#     Compresses the signal to one length (which is the smallest file size)
+#     """
+#     sample_rate, signal = wavfile.read('clean/'+file)
+#     # signal = signal + 0.5
+#     # signal = signal[:-21]  # Remove Tail 
+#     # signal = signal[21:]  # Remove Head
+#     # Conpression of the signal
+#     # comp_signal = resample(signal)
+#     # Pre-Emphasis
+#     # emphasized_signal = np.append(comp_signal[0], comp_signal[1:] - config.pre_emphasis * comp_signal[:-1])
+#     return sample_rate, signal
 
-def framing(sample_rate, emphasized_signal):
+def framing(sample_rate, signal):
     # Framing
     """
     Framing the singnal
@@ -51,17 +51,17 @@ def framing(sample_rate, emphasized_signal):
     frame_length = int(round(frame_length))
     frame_step = int(round(frame_step))   
         
-    signal_length = len(emphasized_signal)
+    signal_length = len(signal)
     num_frames = int(np.ceil(float(np.abs(signal_length - frame_length)) 
                              / frame_step))  # Make sure that we have at least 1 frame
     
     pad_signal_length = num_frames * frame_step + frame_length
     z = np.zeros((pad_signal_length - signal_length))
-    pad_signal = np.append(emphasized_signal, z) # Pad Signal to make sure that all frames have equal number of samples without truncating any samples from the original signal
+    pad_signal = np.append(signal, z) # Pad Signal to make sure that all frames have equal number of samples without truncating any samples from the original signal
     
     indices = np.tile(np.arange(0, frame_length), (num_frames, 1)) + np.tile(np.arange(0, num_frames * frame_step, frame_step), (frame_length, 1)).T
     frames = pad_signal[indices.astype(np.int32, copy=False)]
-
+    # frames = pad_signal[indices.astype(np.int16, copy=False)]
     frames *= np.hamming(frame_length)  # Hamming Window
     return frames
 
