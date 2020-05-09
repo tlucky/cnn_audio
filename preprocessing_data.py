@@ -10,7 +10,7 @@ from scipy.io import wavfile
 from tqdm import tqdm
 import librosa
 import numpy as np
-
+import matplotlib.pyplot as plt
 import signal_processing as sp
 import config
 
@@ -39,31 +39,37 @@ if len(os.listdir('clean')) == 0:
         # f= 'O2206.WAV'
 
         #  Importing and adjusting sample rate
-        signal, sample_rate = librosa.load('./wavfile/'+f, sr=config.sample_rate)  
-        signal = signal+0.5  # Adjusting the signal (offset)
+        signal, sample_rate = librosa.load('./wavfile/'+f, sr=config.sample_rate)
+
+        signal = signal + 0.5  # Adjusting the signal (offset)
         signal = signal[:-21]
         signal = signal[21:]  
         signal_mani = signal
-        
+
         # Data augmentation        
-        pitch_shift = np.random.uniform(low=0.8, high=1.2, size=(3,))
-        
+        pitch_shift = np.random.uniform(low=0.8, high=1.2, size=(2,))
+        # pitch_shift = np.array([1])
         for p_index in range (0, len(pitch_shift)):  #  for pitch shifting
             max_quarter = max(abs(signal[ : int(len(signal)*0.4)]))
             signal_index = np.where(abs(signal) == max_quarter)[0][0]
             
             for t_index in range (0, 3):  #  for time shifting                
-                time_shift = np.random.randint(3000, 9000)  # Data augmentation
+                time_shift = np.random.randint(500, 9000)  # Data augmentation
                 signal_mani = signal * pitch_shift[p_index]
                 signal_cut = signal_mani[signal_index-time_shift : 
                                          signal_index-time_shift+sample_length]
                 signal_cut = np.append(signal_cut,signal)  # Append signal
                 signal_cut = signal_cut[:sample_length]
                 f_1 = f[:-4] + str(p_index) + str(t_index) + f[-4:]  # New file name
+                
+                # plt.plot(signal_cut)
+                # plt.show()
+                
                 if len(signal_cut) == sample_length:  # Check signal length
                     wavfile.write(filename='./clean/'+f_1, rate=sample_rate, 
                                   data=signal_cut)
-                
+                    
+
                 # Create 'Noise' class for better prediction
                 if f[0] == 'C':  
                     max_signal = max(abs(signal))
@@ -85,6 +91,7 @@ if len(os.listdir('clean')) == 0:
                     if len(signal_noise) == sample_length:  # Check signal length 
                         wavfile.write(filename='./clean/'+f_2, rate=sample_rate, 
                                       data=signal_noise)
+                        
        
         # import matplotlib.pyplot as plt
         # plt.plot(signal)

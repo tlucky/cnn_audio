@@ -5,6 +5,7 @@ import os
 from scipy.io import wavfile
 import signal_processing as sp   
 import config
+from librosa.feature import melspectrogram
 
 def work_status(begin_str):
     """
@@ -14,10 +15,10 @@ def work_status(begin_str):
         return (0)  # Open
     if begin_str.startswith('C') == True:
         return (1)  # Close
-    if begin_str.startswith('Q') == True:
-        return (2)  # Error
+    if begin_str.startswith('N') == True:
+        return (2)  # Noise
 
-def rescale_axis(max_old_total, max_new_total, max_new_scale, n_ticks): #, max_old=config.len_ms:
+def rescale_axis(max_old_total, max_new_total, max_new_scale, n_ticks):
     """
     Calculates the arrays which are needed for resizing the y-axis    
     """   
@@ -232,8 +233,7 @@ dict_status = {0:'Open', 1:'Close', 2:'Error'}
 #  Calculation
 for c in classes:   
     file = df[df.label==c].iloc[1,0]
-    sample_rate, signal = wavfile.read('clean/'+file)
-    # sample_rate, signal = sp.read_wav(folder='clean/',file=file)  # Read & 1. processing    
+    sample_rate, signal = wavfile.read('clean/'+file)    
     Y, freq = sp.calc_fft(signal, sample_rate)  # FFT
     Y_h, freq_h= sp.calc_fft(signal*np.hamming(len(signal)), sample_rate)    
     frames = sp.framing(sample_rate, signal)  # Framing       
@@ -242,7 +242,7 @@ for c in classes:
     fbnorm = filter_banks - (np.mean(filter_banks, axis=0) + 1e-8) # Mean Normalization      
     mfcc = sp.calc_mfcc(filter_banks)  # MFCC
     
-    #  Store in dict
+    #  Store in dictionaries
     c = dict_status[c]
     signals[c] = signal
     ffts[c] = Y, freq
