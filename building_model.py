@@ -49,15 +49,15 @@ def build_X_y():
     """
     Building X and y for the input and output of the CNN
     """   
-    tmp = check_data()
-    if tmp:
-        return tmp.data[0], tmp.data[1]  # return X, y from the pickle folder
+    # tmp = check_data()
+    # if tmp:
+    #     return tmp.data[0], tmp.data[1]  # return X, y from the pickle folder
 
     X = []
     y = []
     for index, file in tqdm(enumerate(df['fname'])):        
         sample_rate, signal = wavfile.read('clean/'+file)  # Read & 1.processing
-        mel = melspectrogram(y=signal, sr=sample_rate, n_mels=49, n_fft=220, 
+        mel = melspectrogram(y=signal, sr=sample_rate, n_mels=32, n_fft=220, 
                               hop_length=110, window='hann')
         # mel = mel[2:]
         S = amplitude_to_db(mel)        
@@ -66,6 +66,7 @@ def build_X_y():
         y.append(fname) 
     
     X = np.array(X)
+    print(X.shape)
     X = X.reshape(X.shape[0], X.shape[1], X.shape[2], 1)
     y = np.array(y)
     y = to_categorical(df.label, num_classes=3)    
@@ -118,7 +119,8 @@ def training_type(model_name, epochs=20, batch_size=512, cv=0):
 
 
 #  Program
-os.environ["PATH"] += os.pathsep + 'C:/Program Files (x86)/Graphviz2.38/bin/'
+if os.name == 'nt':  # Check if Windows is the OS
+    os.environ["PATH"] += os.pathsep + 'C:/Program Files (x86)/Graphviz2.38/bin/'
 config = config.Config()
 #  Importing data
 df = pd.DataFrame(columns=['fname', 'label', 'length'],)  
@@ -142,11 +144,11 @@ y_flat = np.argmax(y, axis=1)
 history = History()
 
 #  Choose the CNN model from the file model_type and save into folder models
-model = model_definition.get_conv_model_8()
+model = model_definition.get_conv_model()
 plot_model(model, to_file='model.png', show_shapes=True, show_layer_names=True)
 
-accuracy, loss = training_type(model, epochs = 200, cv=20)  # CV or not
-model.save('models/CCN_8_49.h5')  # For saving the CNN model
+accuracy, loss = training_type(model, epochs = 70, cv=5)  # CV or not
+model.save('models/CCN_6_32.h5')  # For saving the CNN model
 
 
 #  Print accuracy and loss of the CNNs

@@ -32,7 +32,6 @@ from scipy.io import wavfile
     # plt.legend()
     # plt.show()
 
-
 def model_predict():
     """
     Prediction of the classes 'open' and 'close'
@@ -48,14 +47,11 @@ def model_predict():
     # f = 'O1910_111.WAV'
     # sample_rate, signal = wavfile.read('clean/'+f)
     
-    mel = melspectrogram(y=signal, sr=config.sample_rate, n_mels=49, n_fft=220, 
+    mel = melspectrogram(y=signal, sr=config.sample_rate, n_mels=32, n_fft=220, 
                               hop_length=110, window='hann')
-    # mel = mel[2:]
-    # mel = melspectrogram(y=signal, sr=16000, n_mels=32, n_fft=256, 
-    #                       hop_length=128, window='hann')
     X = librosa.amplitude_to_db(mel)
-    plt.imshow(X)
-    plt.show()
+    # plt.imshow(X)
+    # plt.show()
     X = X.reshape(1, X.shape[0], X.shape[1], 1)
     
     #  Prediction
@@ -77,7 +73,7 @@ config = config.Config()
 if __name__ == "__main__":  
 
     #  Load CNN
-    model = load_model('models/CCN_8_49.h5')
+    model = load_model('models/CCN_8_32.h5')
     model.layers[0].input_shape
     
     #  Initializing PyAudio
