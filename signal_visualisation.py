@@ -7,8 +7,9 @@ import signal_processing as sp
 import config
 from librosa.feature import melspectrogram
 from librosa.core import amplitude_to_db, power_to_db, stft
-from librosa.display import specshow
+# from librosa.display import specshow
 import librosa
+from scipy.signal import wiener, medfilt2d
 
 def work_status(begin_str):
     """
@@ -20,7 +21,7 @@ def work_status(begin_str):
         return (1)  # Close
     if begin_str.startswith('N') == True:
         return (2)  # Noise
-              
+  
        
 #  Program      
 config = config.Config()
@@ -54,16 +55,25 @@ dict_status = {0:'Open', 1:'Close', 2:'Noise'}
 
 #  Calculation
 for c in classes:   
-    file = df[df.label==c].iloc[4,0]
-    sample_rate, signal = wavfile.read('clean/'+file)    
+    file = df[df.label==c].iloc[12,0]
+    sample_rate, signal = wavfile.read('clean/'+file)   
+    
     Y, freq = sp.calc_fft(signal, sample_rate)  # FFT    
     
-    stft_signal = np.abs(stft(signal, n_fft=220, hop_length=110, window='hann'))
-    mel = melspectrogram(y=signal, sr=sample_rate, n_mels=32, n_fft=220, 
-                          hop_length=110, window='hann')
-    mel_amp = amplitude_to_db(mel)
-    mel_pow = power_to_db(mel)
-    
+    stft_signal = np.abs(stft(signal, 
+                              n_fft=config.n_fft, 
+                              hop_length=config.hop_length, 
+                              window=config.window))
+    mel = melspectrogram(y=signal, 
+                         sr=config.sample_rate, 
+                         n_mels=config.n_mels, 
+                         n_fft=config.n_fft, 
+                         hop_length=config.hop_length, 
+                         window=config.window)  
+    mel_amp = amplitude_to_db(mel)    
+    mel_pow = power_to_db(mel)    
+    # mel_pow = medfilt2d(mel_pow)
+    # mel_pow = wiener(mel_pow)
     #  Store in dictionaries
     c = dict_status[c]
     signals[c] = signal
@@ -101,31 +111,31 @@ plt.subplot(3,2,3)
 plt.title('Spektrogramm')
 im = librosa.amplitude_to_db(list(stfts.values())[0])
 librosa.display.specshow(im, y_axis='linear', sr=32000, hop_length=220)
-plt.clim(-65,20)
+plt.clim(-90,20)
 # plt.colorbar(format='%+2.0f dB', fraction=0.1, pad=0.04)
 
 plt.subplot(3,2,4)
 plt.title('Spektrogramm')
 im = librosa.amplitude_to_db(list(stfts.values())[1])
 librosa.display.specshow(im, sr=16000, hop_length=110)
-plt.clim(-65,20)
-# plt.colorbar(format='%+2.0f dB', fraction=0.1, pad=0.04)
+plt.clim(-90,20)
+plt.colorbar(format='%+2.0f dB', fraction=0.1, pad=0.04)
 
 plt.subplot(3,2,5)
 plt.title('Mel Spektrogramm')
-im = list(mel_pows.values())[0]
+im = list(mel_amps.values())[0]
 librosa.display.specshow(im, sr=16000, hop_length=110, x_axis='ms', y_axis='mel')
-plt.clim(-65,20)
+plt.clim(-90,20)
 # plt.colorbar(format='%+2.0f dB')
 
 plt.subplot(3,2,6)
 plt.title('Mel Spektrogramm')
-im = list(mel_pows.values())[1]
+im = list(mel_amps.values())[1]
 librosa.display.specshow(im, sr=16000, hop_length=110, x_axis='ms', y_axis='mel')
-plt.clim(-65,20)
+plt.clim(-90,20)
 plt.yticks([])
 plt.ylabel('')
-# plt.colorbar(format='%+2.0f dB', fraction=0.1, pad=0.04)
+plt.colorbar(format='%+2.0f dB', fraction=0.1, pad=0.04)
 
 plt.subplots_adjust(hspace = 0.2)
 plt.tight_layout()

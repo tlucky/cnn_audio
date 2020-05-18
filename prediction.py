@@ -8,54 +8,69 @@ from tensorflow.keras.models import load_model
 import pickle
 from datetime import datetime
 from librosa.feature import melspectrogram
-import librosa.core
+# import librosa.core
 import config
 import server
 
+from librosa.core import amplitude_to_db, power_to_db, stft
+import librosa
 import matplotlib.pyplot as plt
 import librosa.display
-from scipy.io import wavfile
-
-# def analysing():  
-    #  Analysing data
-    # import matplotlib.pyplot as plt
-    # y_prob=np.array(y_prob)
-    
-    # plt.plot(y_prob[:,0],color='green',label=classes[0])
-    # plt.plot(y_prob[:,1],color='red',label=classes[1])
-    # plt.plot(y_prob[:,2],color='black',label=classes[2],alpha=0.7)
-    # plt.plot(np.ones(len(y_prob))*config.threshold[0],color='black',
-    #          linestyle='--', label = 'Grenzwert: ' + classes[0])
-    # plt.plot(np.ones(len(y_prob))*config.threshold[1],color='black',
-    #          linestyle='--', label = 'Grenzwert: ' + classes[1])
-    # # plt.ylim(0,0.5)
-    # plt.legend()
-    # plt.show()
 
 def model_predict():
     """
     Prediction of the classes 'open' and 'close'
     """
-    
+    # global singal_old
     #  Create a numpy array of audio data
-    signal = np.frombuffer(stream.read(int(config.new_len),
+
+    signal = np.frombuffer(stream.read(int(config.new_len*0.75),
                                        exception_on_overflow = False),
                                        dtype=np.float32)
+    # conf = np.zeros(int(14000*0.25), dtype=float)
+    signal_buffer_old = config.signal_old
+    config.signal_old = signal[7000:]
+    signal_merged = np.append(signal_buffer_old, signal)
     
-    # f = 'C015_110.WAV'
-    # f = 'CQ1117_102.WAV'
-    # f = 'O1910_111.WAV'
-    # sample_rate, signal = wavfile.read('clean/'+f)
-    
-    mel = melspectrogram(y=signal, sr=config.sample_rate, n_mels=32, n_fft=220, 
-                              hop_length=110, window='hann')
+    # import random
+    # from scipy.io import wavfile
+    # import time
+    # import os
+    # time.sleep(2)
+    # f = random.choice(os.listdir('clean_test/'))
+    # print (f[0])
+    # sample_rate, signal = wavfile.read('clean_test/'+f)
+
+    mel = melspectrogram(y=signal_merged, 
+                         sr=config.sample_rate, 
+                         n_mels=config.n_mels, 
+                         n_fft=config.n_fft, 
+                         hop_length=config.hop_length, 
+                         window=config.window) 
+
     X = librosa.amplitude_to_db(mel)
-    # plt.imshow(X)
-    # plt.show()
+
     X = X.reshape(1, X.shape[0], X.shape[1], 1)
     
     #  Prediction
     prediction = model.predict([X])    
+    
+    x_ax = np.arange(0,config.new_len)/config.sample_rate
+    plt.figure(figsize=(12, 8))
+    plt.subplot(2,1,1)
+    plt.ylim(-0.4, 0.4)
+    plt.xlim(0,max(x_ax))
+    plt.plot(x_ax,signal_merged)
+
+    plt.subplot(2,1,2)       
+    librosa.display.specshow(librosa.amplitude_to_db(mel), sr=config.sample_rate, 
+                             hop_length=config.hop_length,
+                             x_axis='ms', y_axis='mel')
+    # plt.colorbar(format='%+2.0f dB')
+    plt.title('Acc open: ' +str(np.around(prediction[0][0],3)) 
+              + '  |  Acc close: ' + str(np.around(prediction[0][1],3)))
+    plt.clim(-65,-10)
+    plt.show()
     
     # prediction[0] = np.around(prediction[0],decimals=4)
     print(prediction[0])
@@ -64,7 +79,7 @@ def model_predict():
         print('Acc: '+str(prediction[0][0])+'  Class: '+str(config.classes[0]))         
     if prediction[0][1] > config.threshold[1]:
         print('Acc: '+str(prediction[0][1])+'  Class: '+str(config.classes[1]))     
-    # y_prob.append(prediction[0])
+
     return prediction[0][0], prediction[0][1]
 
 
@@ -73,14 +88,14 @@ config = config.Config()
 if __name__ == "__main__":  
 
     #  Load CNN
-    model = load_model('models/CCN_8_32.h5')
+    model = load_model('models/CNN_v3_32x64_sigmoid.h5')
     model.layers[0].input_shape
     
     #  Initializing PyAudio
     p=pyaudio.PyAudio()
-    stream=p.open(format=pyaudio.paFloat32,channels=1, 
+    stream=p.open(format=pyaudio.paFloat32, channels=1, 
                   rate=config.sample_rate, input=True)
-     
+    config.signal_old = np.zeros(int(config.new_len*0.25), dtype=float) 
     open_merker = 0
     #  Start and define the OPC UA Server
     # opc_server = server.ServerClass()
@@ -90,7 +105,7 @@ if __name__ == "__main__":
     while True:        
         
         open_pred, close_pred = model_predict()
-        
+      
         #  Load valve01 properties to get the cycles (open-close-open)
         #  Read number of cycles from pickle
         with open('pickles/valve01.p', 'rb') as handle:
