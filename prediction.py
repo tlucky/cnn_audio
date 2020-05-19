@@ -55,13 +55,13 @@ def model_predict():
     #  Prediction
     prediction = model.predict([X])    
     
+    #  Plots
     x_ax = np.arange(0,config.new_len)/config.sample_rate
     plt.figure(figsize=(12, 8))
     plt.subplot(2,1,1)
     plt.ylim(-0.4, 0.4)
     plt.xlim(0,max(x_ax))
     plt.plot(x_ax,signal_merged)
-
     plt.subplot(2,1,2)       
     librosa.display.specshow(librosa.amplitude_to_db(mel), sr=config.sample_rate, 
                              hop_length=config.hop_length,
@@ -69,7 +69,7 @@ def model_predict():
     # plt.colorbar(format='%+2.0f dB')
     plt.title('Acc open: ' +str(np.around(prediction[0][0],3)) 
               + '  |  Acc close: ' + str(np.around(prediction[0][1],3)))
-    plt.clim(-65,-10)
+    plt.clim(-90,22)
     plt.show()
     
     # prediction[0] = np.around(prediction[0],decimals=4)

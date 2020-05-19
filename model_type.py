@@ -78,7 +78,6 @@ class ModelSpec:
         self.model.add(BatchNormalization())
         self.model.add(Activation('relu'))
         self.model.add(MaxPooling2D(pool_size=(1, 2),padding='same'))   
-        # self.model.add(Dropout(0.2))
 
         self.model.add(Conv2D(32, (3,3),padding='same'))
         self.model.add(BatchNormalization())
@@ -88,8 +87,7 @@ class ModelSpec:
         self.model.add(Conv2D(64, (3,3), activation='relu',padding='same'))       
         self.model.add(MaxPooling2D(pool_size=(2, 2),padding='same'))
  
-        self.model.add(Conv2D(64, (3,3), activation='relu',padding='same'))
-        # self.model.add(Dropout(0.5))     
+        self.model.add(Conv2D(64, (3,3), activation='relu',padding='same'))   
         self.model.add(Flatten())   
         self.model.add(Dropout(0.5))
         self.model.add(Dense(1024, activation='relu'))
