@@ -1,6 +1,6 @@
 ## Table of contents
 * [General info](#general-info)
-* [Setup](#Setup)
+* [Installation](#Installation)
 
 ## General info
 A Convolutional Neural Network classify the different states “open” and “close” of a valve by using an acoustic sensor. 
