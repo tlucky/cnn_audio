@@ -24,8 +24,8 @@ class ServerClass:
         """
         #  Instanciation of OPC-UA Server
         self.server = Server()        
-        self.server.set_endpoint("opc.tcp://192.168.178.44:4840/")
-        self.server.set_server_name('Opc UA Valve-Sensor Server')
+        self.server.set_endpoint("opc.tcp://0.0.0.0:4840/")
+        self.server.set_server_name('Opc UA Valve Test Server')
         # set all possible endpoint policies for clients to connect through
         self.server.set_security_policy([
                     ua.SecurityPolicyType.NoSecurity,
@@ -40,10 +40,8 @@ class ServerClass:
         self.dev = self.server.nodes.base_object_type.add_object_type(self.idx,
                                                                       "Test Server")
         
-        self.devices = self.server.nodes.objects.add_object(self.idx,
-                                                            "Devices")
-        self.valve01 = self.devices.add_object(self.idx,
-                                               'Valve01')
+        self.valve01 = self.server.nodes.objects.add_object(self.idx,
+                                                    'Valve01')
 
         
         #  Definition of the pickle file
@@ -51,31 +49,32 @@ class ServerClass:
             self.valve_prop = pickle.load(handle)
         
         #  Definition of the OPC UA classes and variables
-        self.typ_valve01 = self.valve01.add_variable(self.idx,
-                                                     "Valve Type",
-                                                     self.valve_prop['typ'])
-        self.medium_valve01 = self.valve01.add_variable(self.idx,
-                                                        "Medium",
-                                                        self.valve_prop['medium'])
+        self.typ_valve01 = self.valve01.add_property(self.idx, "ValveType",
+                                                     self.valve_prop['typ'],
+                                                     ua.VariantType.String)
         
-        self.status_valve01 = self.valve01.add_variable(self.idx,
-                                                        "Status",
-                                                        self.valve_prop['status'])
+        self.medium_valve01 = self.valve01.add_property(self.idx, "Medium",
+                                                        self.valve_prop['medium'],
+                                                        ua.VariantType.String)
+
+        self.status_valve01 = self.valve01.add_variable(self.idx, "Status",
+                                                        self.valve_prop['status'],
+                                                        ua.VariantType.String)
         self.status_valve01.set_writable()
         
         self.accuracy_valve01 = self.valve01.add_variable(self.idx, "Accuracy",
                                                           self.valve_prop['accuracy'],
-                                                          ua.VariantType.Float)
+                                                          ua.VariantType.Double)
         self.accuracy_valve01.set_writable()
         
-        self.status_update_valve01 = self.valve01.add_variable(self.idx,
-                                                               "Last Status Update",
-                                                               self.valve_prop['updated'])
+        self.status_update_valve01 = self.valve01.add_variable(self.idx, "LastUpdate",
+                                                               self.valve_prop['updated'],
+                                                               ua.VariantType.DateTime)
         self.status_update_valve01.set_writable()  
         
-        self.cycles_valve01 = self.valve01.add_variable(self.idx,
-                                                        'Total Cycles',
-                                                        self.valve_prop['cycles'])
+        self.cycles_valve01 = self.valve01.add_variable(self.idx, 'TotalCycles',
+                                                        self.valve_prop['cycles'],
+                                                        ua.VariantType.Int64)
         self.cycles_valve01.set_writable() 
         
         self.server.start()

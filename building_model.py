@@ -18,7 +18,7 @@ from sklearn.model_selection import KFold
 from librosa.feature import melspectrogram
 from scipy.signal import medfilt2d, wiener
 import random
-from librosa.core import amplitude_to_db, power_to_db
+from librosa.core import amplitude_to_db
 
 import config
 import model_type
@@ -51,9 +51,9 @@ def build_X_y():
     """
     Building X and y for the input and output of the CNN
     """   
-    # tmp = check_data()
-    # if tmp:
-    #     return tmp.data[0], tmp.data[1]  # return X, y from the pickle folder
+    tmp = check_data()
+    if tmp:
+        return tmp.data[0], tmp.data[1]  # return X, y from the pickle folder
 
     X = []
     y = []
@@ -100,6 +100,8 @@ def training_type(model_name, epochs=20, batch_size=512, cv=0):
     """   
     accuracy = []
     loss = []
+    val_accuracy = []
+    val_loss = []
     if (cv == 0) or (cv == 1):
         #  Split into training and test data
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, 
@@ -107,10 +109,13 @@ def training_type(model_name, epochs=20, batch_size=512, cv=0):
                                                             random_state=1)        
         model = model_name
         model.fit(X_train, y_train, epochs=epochs, batch_size=batch_size, 
-                  verbose=1, callbacks=[history], shuffle=True)
-        print('Model evaluation ',model.evaluate(X_test,y_test))
+                  verbose=1, shuffle=True, callbacks=[history], 
+                  validation_data=(X_test, y_test))
+        print('Model evaluation ', model.evaluate(X_test,y_test))
         accuracy.append(history.history['accuracy'])
-        loss.append(history.history['loss'])            
+        loss.append(history.history['loss'])     
+        val_accuracy.append(history.history['val_accuracy'])
+        val_loss.append(history.history['val_loss']) 
     if cv > 1:
         #  Cross validation 
         #  https://androidkt.com/k-fold-cross-validation-with-tensorflow-keras/
@@ -121,17 +126,19 @@ def training_type(model_name, epochs=20, batch_size=512, cv=0):
             y_train, y_test = y[train_index], y[test_index]          
             model=model_name        
             model.fit(X_train, y_train, epochs=epochs, batch_size=batch_size, 
-                      shuffle=True, verbose=1, callbacks=[history])
+                      shuffle=True, verbose=1, callbacks=[history], 
+                      validation_data=(X_test, y_test))
             print('Model evaluation ',model.evaluate(X_test,y_test))
             accuracy.append(history.history['accuracy'])
             loss.append(history.history['loss'])
-            #  Results and grafic   
+            val_accuracy.append(history.history['val_accuracy'])
+            val_loss.append(history.history['val_loss'])  
         avg_accuracy = np.mean([accuracy[i][-1] for i in range(len(accuracy))])
         avg_loss = np.mean([loss[i][-1] for i in range(len(loss))])
         avg_accuracy = np.around(avg_accuracy,decimals=3)
         avg_loss = np.around(avg_loss,decimals=3)
         print('Avg Loss: ' +str(avg_loss)+' Avg Accuracy: ' +str(avg_accuracy))
-    return accuracy, loss
+    return accuracy, loss, val_accuracy, val_loss
 
 
 #  Program
@@ -161,21 +168,38 @@ y_flat = np.argmax(y, axis=1)
 history = History()
 
 #  Choose the CNN model from the file model_type and save into folder models
-model = model_definition.get_conv_model_2()
+model = model_definition.get_conv_model()
 plot_model(model, to_file='model.png', show_shapes=True, show_layer_names=True)
 
-accuracy, loss = training_type(model, epochs = 70, cv=5)  # CV or not
-model.save('models/CNN_v3_32x64_sigmoid.h5')  # For saving the CNN model
+accuracy, loss, val_accuracy, val_loss = training_type(model, epochs = 100, cv=1)  # CV or not
+model.save('models/CNN.h5')  # For saving the CNN model
 
 #  Print accuracy and loss of the CNNs
-epochs = range(len(accuracy[0]))
+epochs = range(1, 1+len(accuracy[0]))
+plt.style.use('ggplot')
+plt.figure(figsize=(5.9, 5),dpi=400)
+plt.ylim(0,1.01)
+plt.xlim(1,len(accuracy[0]))
+plt.locator_params(axis='x', nbins=6)
+plt.xlabel('Epoche')
+plt.ylabel('Genauigkeit')
 for index, value in enumerate(accuracy):
-    plt.plot(epochs, value, alpha = 0.5,
-              label='Training accuracy no. ' + str(index+1).format(i=index))
-for index, value in enumerate(loss):
-    plt.plot(epochs, value, '--', alpha = 0.9,
-              label='Training loss no. ' + str(index+1).format(i=index))
-plt.title('Training accuracy and Training loss')
-plt.legend()
+    plt.plot(epochs, value, alpha = 1, label='Trainingsdaten')# + str(index+1).format(i=index))
+for index, value in enumerate(val_accuracy):
+    plt.plot(epochs, value, '--', alpha = 1, label='Testdaten')# + str(index+1).format(i=index-3))
+plt.legend(loc='lower right')
+plt.savefig('genauigkeit.png', dpi=400)
 plt.show()
 
+plt.figure(figsize=(5.9, 5),dpi=400)
+plt.xlim(1,len(loss[0]))
+plt.locator_params(axis='x', nbins=6)
+plt.xlabel('Epoche')
+plt.ylabel('Verlust')
+for index, value in enumerate(loss):
+    plt.plot(epochs, value, alpha = 1, label='Trainingsdaten')# + str(index+1).format(i=index))
+for index, value in enumerate(val_loss):
+    plt.plot(epochs, value, '--', alpha = 1, label='Testdaten')# + str(index+1).format(i=index-3))
+plt.legend(loc='upper right')
+plt.savefig('verlust.png', dpi=400)
+plt.show()
