@@ -1,2 +1,2 @@
 # cnn_audio
-Convolutional Neural Network for audio files
+Convolutional Neural Network for valve status detection
